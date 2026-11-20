@@ -63,6 +63,10 @@ with sync_playwright() as p:
     assert cb and cb[-1]["temp"] == 60, cb
     # editeur de slot : choix de bobine + calibration PA
     pg.click('.item.click[data-edit="0_1"] .t')
+    assert pg.locator(".ed").count() == 1
+    pg.click('.item.click[data-edit="0_1"] .t')       # 0.35.4 : 2e clic sur la bobine -> repliee
+    assert pg.locator(".ed").count() == 0, "second clic replie la bobine"
+    pg.click('.item.click[data-edit="0_1"] .t')
     pg.click("#e_spbtn")
     opts = pg.eval_on_selector_all("#e_splist .spo", "els=>els.map(e=>e.dataset.v)")
     assert opts[0] == "" and opts[-1] == "new" and len(opts) > 3, opts

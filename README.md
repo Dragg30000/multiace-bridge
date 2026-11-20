@@ -37,7 +37,9 @@ On export, the plugin runs **the Preflight code served by your U1** (your multiA
 - **High flow / Standard nozzle warning**: with multiACE the slot decides the head, so a colour can land on another nozzle type; the window tells you.
 - **Force a spool** per filament, passed as is to the U1 code (same as a manual edit in multiACE's web Preflight).
 - **Print start**: bed mesh limited to the printed area, flow (PA) calibration per head, stored PA per spool with “Calibrate before”, soft travel to the purge line, time-lapse.
+- **Optimized / per-layer plans** (multiACE 1.27b propose a new spool layout): steps in order and a **final layout** grid; printing waits until the spools are in place.
 - **Send to the U1 without printing**.
+- The **pipeline step is added to your U1 process preset automatically** (save the preset to keep it).
 
 <p align="center"><img src="presentation/images/18b_forcer_bobine.png" width="620"></p>
 
