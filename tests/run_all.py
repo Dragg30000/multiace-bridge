@@ -2,7 +2,7 @@
 import subprocess, sys, os
 here = os.path.dirname(os.path.abspath(__file__))
 tests = ["security_test", "harness", "home_test", "pipeline_test", "stable_test", "cleanup_test",
-         "ui_queue_test", "guard_test", "guard_live_test", "prep_test", "u1nozzle_test", "mini_test", "fold_test", "pop_test", "cam_test", "u1code_test", "host_test"]
+         "ui_queue_test", "guard_test", "guard_live_test", "prep_test", "u1nozzle_test", "mini_test", "fold_test", "pop_test", "cam_test", "u1code_test", "host_test", "u1full_test"]
 bad = []
 env = dict(os.environ, PYTHONPATH=os.path.dirname(here))  # le moteur multiace_engine_127.py est a cote du plugin
 for t in tests:

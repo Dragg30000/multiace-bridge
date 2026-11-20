@@ -31,7 +31,15 @@
 
 <p align="center"><img src="presentation/images/18_preflight_u1.png" width="620"></p>
 
-On export, the plugin runs **the Preflight code served by your U1** (your multiACE version) inside Orca, after checks. If anything doesn't match, nothing is run and the original G-code goes to multiACE's Preflight instead. The plugin has no assignment logic of its own and never changes your export.
+On export, the plugin runs **the Preflight code served by your U1** (your multiACE version) inside Orca, after checks: the U1 decides, the plugin shows, applies your choices and checks. If anything doesn't match, nothing is run and the original G-code goes to multiACE's Preflight instead. The plugin has no assignment logic of its own and never changes your export.
+
+- **U1 plans** (as sliced / optimized / per layer) with tool changes and spool swaps.
+- **High flow / Standard nozzle warning**: with multiACE the slot decides the head, so a colour can land on another nozzle type; the window tells you.
+- **Force a spool** per filament, passed as is to the U1 code (same as a manual edit in multiACE's web Preflight).
+- **Print start**: bed mesh limited to the printed area, flow (PA) calibration per head, stored PA per spool with “Calibrate before”, soft travel to the purge line, time-lapse.
+- **Send to the U1 without printing**.
+
+<p align="center"><img src="presentation/images/18b_forcer_bobine.png" width="620"></p>
 
 Full presentation: [EN slides](presentation/multiACE_Bridge_slides_EN.pdf) · [diaporama FR](presentation/multiACE_Bridge_diaporama_FR.pdf) · guides in [docs/](docs/).
 The interface is in French for now.
