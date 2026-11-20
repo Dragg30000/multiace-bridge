@@ -5,6 +5,8 @@
 > **multiACE is decay71's project.** His code does all the real work; this plugin only brings it into OrcaSlicer. All credit goes to decay71 and the multiACE contributors.
 > **multiACE est le projet de decay71.** C'est son code qui fait tout le travail ; ce plugin n'en est qu'une interface dans OrcaSlicer.
 
+> ⚠ **Requires multiACE (by decay71) installed on your Snapmaker U1**: the plugin is only an interface, it does nothing without it. multiACE **1.27b or newer** for the “U1 Preflight” window (older versions: export goes to multiACE's own Preflight).
+
 <p align="center"><img src="presentation/banner.png" alt="multiACE Bridge" width="820"></p>
 
 ## Features / Fonctions
@@ -43,6 +45,8 @@ On export, the plugin runs **the Preflight code served by your U1** (your multiA
 
 <p align="center"><img src="presentation/images/18b_forcer_bobine.png" width="620"></p>
 
+<p align="center"><img src="presentation/images/19_disposition_finale.png" width="620"></p>
+
 Full presentation: [EN slides](presentation/multiACE_Bridge_slides_EN.pdf) · [diaporama FR](presentation/multiACE_Bridge_diaporama_FR.pdf) · guides in [docs/](docs/).
 The interface is in French for now.
 
@@ -52,7 +56,7 @@ The interface is in French for now.
 
 **Manual:** download `multiace_bridge_any.py`, then Orca → File → Plugins → *Install local plugin* → restart Orca → allow network access to your U1.
 
-Requirements: OrcaSlicer 2.5, Snapmaker U1, multiACE with Preflight inbox (0.99.8b or newer; tested on 1.27b, paxx firmware). Tested with 2 ACE Pro on a USB hub.
+Requirements: OrcaSlicer 2.5, Snapmaker U1 with **multiACE 1.27b or newer** installed (developed and tested on 1.27b with the paxx12 Extended firmware; the remote screen needs Extended with “Remote Screen” enabled). Tested with 2 ACE Pro on a USB hub.
 
 ## Bugs & feedback
 

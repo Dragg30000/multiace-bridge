@@ -86,7 +86,7 @@ Si un ACE perd sa liaison USB (hub, longues impressions…), le plugin relance l
 
 **Configuration requise**
 - OrcaSlicer **2.5** (avec le système de plugins)
-- Snapmaker **U1** + **multiACE** (développé et testé avec la 1.27b, firmware paxx)
+- Snapmaker **U1** avec **multiACE installé** (de decay71) : **indispensable**, le plugin n'en est qu'une interface et ne fait rien sans lui. **multiACE 1.27b ou plus récent** pour la fenêtre « Preflight de la U1 » (développé et testé avec la 1.27b et le firmware paxx12 Extended)
 - Testé sur ma machine : U1 avec 2 ACE Pro reliés par un hub USB, T3 en buse Standard et les autres têtes en Haut débit
 
 **Installation**
@@ -180,7 +180,7 @@ If an ACE drops its USB link (hub, long prints…), the plugin restarts **drying
 
 **Requirements**
 - OrcaSlicer **2.5** (with plugin support)
-- Snapmaker **U1** + **multiACE** (developed and tested on 1.27b, paxx firmware)
+- Snapmaker **U1** with **multiACE installed** (by decay71): **required**, the plugin is only an interface and does nothing without it. **multiACE 1.27b or newer** for the “U1 Preflight” window (developed and tested on 1.27b with the paxx12 Extended firmware)
 - Tested on my machine: a U1 with 2 ACE Pro units on a USB hub, T3 with a Standard nozzle and the other heads with High Flow
 
 **Installation**
