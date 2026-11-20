@@ -4,6 +4,11 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (2 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Les versions précédentes sont dans les Releases GitHub.
 
+## 0.34.4 (20/11/2026)
+- Préparation avec le code de la U1 : prise en charge de **multiACE 1.27b**. Premier essai sur la vraie U1 : la vérification avait refusé le Preflight de la 1.27b (« parse_meta a changé (with_header) ») et, comme prévu, envoyé le fichier d'origine au Preflight de multiACE. Le plugin s'adapte maintenant à la version de la U1 : il n'exige que les fonctions présentes depuis la 1.27b et n'utilise les nouveautés (en-tête, estimation des échanges, options de lancement) que si le code de la U1 les fournit. Toujours lu sans être exécuté avant de décider.
+- Avec multiACE 1.27b, les options « Au lancement » ne font pas partie du code partagé : la fenêtre le signale, la U1 garde ses réglages, et « Ouvrir dans le Preflight multiACE » permet de les choisir. Le plugin n'ajoute rien lui-même.
+- Tests : u1code_test.py vérifie aussi le vrai code de multiACE 1.27b (rapport, fichier préparé, aucune option ajoutée). 17 tests OK.
+
 ## 0.34.3 (20/11/2026)
 - Options déplacées en haut : bouton **⚙** dans la barre du panneau (à côté de ↻). Il ouvre une carte « Options » (adresse de la U1 avec Modifier, homing automatique, garde-fou, préparation de l'export avec le code de la U1), visible même quand les modules sont repliés ou en mode réduit ; ✕ la ferme. Les options ne sont plus cachées dans le module Têtes.
 - Tests : host_test et ui_queue_test ouvrent les options par le bouton ⚙. 17 tests OK.
