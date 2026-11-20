@@ -62,6 +62,10 @@ Je vous présente **multiACE Bridge**, un plugin pour **OrcaSlicer 2.5** qui fai
 
 ![Caméra de la U1 (image d'exemple)](images/08_camera.png)
 
+- **Démarrage avec Orca** : le panneau s'ouvre tout seul, sans passer par l'onglet. Bouton **⚙** en haut pour les options, et l'**adresse de la U1** : prise dans le profil Orca, sinon une boîte s'ouvre pour la saisir ou la corriger.
+
+![Options et adresse de la U1](images/16_options.png)
+
 
 📤 **Export avec le Preflight de ta U1**
 À l'export, le plugin exécute dans Orca le Preflight fourni par ta U1 (le code multiACE de ta version), après vérifications, puis imprime. Si quelque chose ne colle pas, rien n'est exécuté et le G-code original part dans le Preflight de multiACE. Le plugin n'a aucune logique d'attribution à lui.
@@ -151,6 +155,10 @@ Meet **multiACE Bridge**, a plugin for **OrcaSlicer 2.5** that connects Orca to 
 - The U1 **camera** 📷 and **screen** ▣ can be shown in the panel (top, bottom or hidden).
 
 ![U1 camera (example image)](images/08_camera.png)
+
+- **Starts with Orca**: the panel opens on its own, no need to visit the tab. **⚙** button at the top for options, and the **U1 address**: taken from the Orca profile, otherwise a box opens to enter or fix it.
+
+![Options and U1 address](images/16_options.png)
 
 
 📤 **Export with your U1's Preflight**
