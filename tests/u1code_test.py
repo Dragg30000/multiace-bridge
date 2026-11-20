@@ -73,8 +73,14 @@ ok(UP and UP[-1][0].endswith("/upload-and-print") and sent[-1].get("done"), "Imp
 SRC.update(postprocess=open("/tmp/v127/pp.py").read(), core=open("/tmp/v127/core.py").read()); SRC.pop("swap_cost", None)
 LIVE.pop("cost_params", None); mb._u1code.update(sha=None); MODE["pysrc"] = "ok"
 rep, live, sha = mb.u1_report(c, g, "real.gcode")
-ok(rep["plans"]["slicer"]["feasible"] and rep["_prefs_ok"] is False, "1.27b : rapport calculé, options de lancement signalées indisponibles")
+ok(rep["plans"]["slicer"]["feasible"] and rep["_prefs_ok"] is False, "1.27b : rapport calculé (options de lancement par la méthode de multiACE 1.27b)")
 final = mb.u1_prepare(c, g, "real.gcode", "slicer", {"bed": True}, mb._signature(live))
 t2 = open(final, encoding="utf-8", errors="replace").read()
-ok("SET_PRINT_PREFERENCES BED_LEVEL=1" not in t2 and mb.gcode_facts(final)["processed"], "1.27b : fichier préparé par le code de la U1, aucune option ajoutée par le plugin")
+ok(t2.startswith("; multiACE preflight: print preferences\nSET_PRINT_PREFERENCES BED_LEVEL=1 FLOW_CALIBRATE=0 TIME_LAPSE_CAMERA=0 FORCE=1") and mb.gcode_facts(final)["processed"], "1.27b : fichier préparé par le code de la U1, options de lancement comme multiACE 1.27b")
+import subprocess, re as _re
+_src = subprocess.check_output(["git", "-C", "/home/claude/src/multiACE", "show", "v1.27b:multiace/web/backend/main.py"]).decode()
+_ns = {"re": _re}; exec(_src[_src.index("_FLOW_CAL_LINE_RE = re.compile"):_src.index("def _prune_old_jobs")], _ns)
+for _o in [(True, False, False), (True, True, True), (False, False, True)]:
+    _ns["_prepend_print_prefs"](g, g + ".a", *_o); mb.prepend_print_prefs_127(g, g + ".b", *_o)
+    ok(open(g + ".a").read() == open(g + ".b").read(), "options %s : résultat identique à la fonction de multiACE 1.27b" % (_o,))
 srv.shutdown(); print("U1CODE OK")

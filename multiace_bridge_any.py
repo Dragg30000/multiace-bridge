@@ -5,7 +5,7 @@
 # name = "multiACE Bridge (Snapmaker U1)"
 # description = "Interface pour multiACE de decay71 (Snapmaker U1) dans OrcaSlicer : panneau ACE, interface web multiACE en onglet, et envoi de l'export au Preflight de multiACE."
 # author = "Dragg avec son ami Claude"
-# version = "0.34.4"
+# version = "0.35.1"
 # ///
 """multiACE Bridge - relie OrcaSlicer 2.5 a multiACE (decay71/multiACE) sur une Snapmaker U1.
 
@@ -16,8 +16,11 @@ Capacites :
   decharger / secher / calibrer dans une file d'attente ; homing automatique en option ;
   edition des slots et association des bobines de la table multiACE (slots sans RFID).
 * Pipeline "multiACE : envoyer au Preflight" : a l'export, le plugin execute le Preflight fourni par
-  la U1 (code multiACE de sa version, /api/preflight/pysrc + livedata), sans logique propre, verifie
-  tout puis imprime. Si une verification echoue, le G-code original part dans le Preflight de
+  la U1 (code multiACE de sa version, /api/preflight/pysrc + livedata), sans logique d'attribution
+  propre, verifie tout puis imprime. Fenetre : plans de la U1, bobines imposees par l'utilisateur
+  (remap_override du code multiACE, comme son interface web), alerte buse Haut debit / Standard,
+  PA memorise par bobine et « Calibrer avant », maillage limite a la zone imprimee, flux par tete,
+  envoi sans lancer. Si une verification echoue, le G-code original part dans le Preflight de
   multiACE (/api/preflight/inbox).
 * Script "multiACE : renvoyer le dernier G-code".
 
@@ -39,7 +42,7 @@ import uuid
 
 import orca
 
-VERSION = "0.34.4"
+VERSION = "0.35.1"
 TIMEOUT_UI = 4          # secondes, appels faits sur le fil de l'interface
 TIMEOUT_BG = 8          # secondes, appels en arriere-plan
 
@@ -919,6 +922,26 @@ def _load_source(name, path):
     return mod
 
 
+U1CODE_TIMEOUT = 30        # secondes : la U1 qui imprime peut mettre du temps a servir son code
+U1CODE_TRIES = 3
+
+
+def _get_patient(client, path):
+    """GET avec delai long et nouvel essai si la U1 ne repond pas a temps (pas si elle repond une erreur)."""
+    last = None
+    for i in range(U1CODE_TRIES):
+        try:
+            return client.get_json(path, timeout=U1CODE_TIMEOUT)
+        except MultiAceError as e:
+            if getattr(e, "status", None) is not None:
+                raise
+            last = e
+            if _STOP.is_set():
+                break
+            time.sleep(1.5 * (i + 1))
+    raise last
+
+
 def _check_static(core_src):
     """Lit le code sans l'executer : les fonctions et parametres attendus doivent exister."""
     import ast
@@ -939,14 +962,15 @@ def _check_static(core_src):
             raise U1CodeError("%s a changé (%s) : version de multiACE non prise en charge" % (fn, ", ".join(missing)))
     return {"header": "with_header" in defs["parse_meta"],
             "cost": "cost_params" in defs["build_report"] and "header_text" in defs["build_report"],
-            "prefs": "prepend_print_prefs" in defs, "used": "used_ace_slots_file" in defs}
+            "prefs": "prepend_print_prefs" in defs, "used": "used_ace_slots_file" in defs,
+            "remap": "remap_override" in defs["rewrite_pipeline"]}
 
 
 def u1_code(client):
     """Telecharge et verifie le Preflight de la U1 ; renvoie (pp, core, empreinte). Leve U1CodeError."""
     import hashlib
     try:
-        src = client.get_json("/preflight/pysrc", timeout=TIMEOUT_BG)
+        src = _get_patient(client, "/preflight/pysrc")
     except MultiAceError as e:
         raise U1CodeError("la U1 ne fournit pas son Preflight (%s)" % e)
     if not isinstance(src, dict):
@@ -1009,7 +1033,7 @@ def _read_lines(path, size=1 << 20):
 
 def _live(client):
     try:
-        live = client.get_json("/preflight/livedata", timeout=TIMEOUT_BG)
+        live = _get_patient(client, "/preflight/livedata")
     except MultiAceError as e:
         if getattr(e, "status", None) == 409:
             raise U1CodeError("une tête est en mode manuel : attribution indisponible")
@@ -1048,24 +1072,114 @@ def u1_report(client, path, name):
     return report, live, sha
 
 
-def u1_prepare(client, path, name, plan_name, prefs, expected):
-    """Recalcule avec le chargement du moment, ecrit le G-code pret a imprimer, le verifie."""
+# Options de lancement pour multiACE 1.27b : dans cette version, elles ne font pas partie du code
+# partage (preflight_core) mais du serveur multiACE (main.py : _print_prefs_line, _flow_cal_block,
+# _prepend_print_prefs, decay71/multiACE v1.27b, GPL-3.0). Reprises ici a l'identique, utilisees
+# SEULEMENT si le code de la U1 ne fournit pas prepend_print_prefs (versions plus recentes : le leur).
+_FLOW_CAL_LINE_127 = re.compile(r"^\s*SM_PRINT_FLOW_CALIBRATE\b", re.IGNORECASE)
+_AUTO_LOAD_END_127 = re.compile(r"^\s*;\s*multiACE auto-load: end\b")
+_BARE_T_127 = re.compile(r"^\s*T(\d+)\s*(?:;.*)?$")
+
+
+def _flow_cal_block_127(lines):
+    end_idx = None
+    initial = None
+    heads = set()
+    for i, line in enumerate(lines):
+        m = _BARE_T_127.match(line)
+        if m:
+            h = int(m.group(1))
+            if 0 <= h <= 3:
+                heads.add(h)
+                if end_idx is None:
+                    initial = h
+            continue
+        if end_idx is None and _AUTO_LOAD_END_127.match(line):
+            end_idx = i
+    if end_idx is None or not heads:
+        return None, []
+    if initial is None:
+        initial = min(heads)
+    block = ["; multiACE preflight: flow calibration (moved behind the auto-load, heads loaded)\n"]
+    order = sorted(h for h in heads if h != initial) + ([initial] if initial in heads else [])
+    for h in order:
+        block.append("T%d A0\n" % h)
+        block.append("FLOW_CALIBRATE EXTRUDER=%d\n" % h)
+    block.append("T%d\n" % initial)
+    block.append("; multiACE preflight: flow calibration end\n")
+    return end_idx + 1, block
+
+
+def prepend_print_prefs_127(in_path, out_path, bed_mesh=False, camera=False, flow_cal=False):
+    ins_idx, block = None, []
+    if flow_cal:
+        with open(in_path, "r", encoding="utf-8", errors="replace") as src:
+            ins_idx, block = _flow_cal_block_127(src.readlines())
+    i = -1
+    with open(out_path, "w", encoding="utf-8", errors="replace") as out:
+        out.write("; multiACE preflight: print preferences\n")
+        out.write("SET_PRINT_PREFERENCES BED_LEVEL=%d FLOW_CALIBRATE=%d TIME_LAPSE_CAMERA=%d FORCE=1\n"
+                  % (1 if bed_mesh else 0, 1 if flow_cal else 0, 1 if camera else 0))
+        with open(in_path, "r", encoding="utf-8", errors="replace") as src:
+            for i, line in enumerate(src):
+                if ins_idx is not None and i == ins_idx:
+                    out.writelines(block)
+                if line.lstrip().upper().startswith("SET_PRINT_PREFERENCES"):
+                    out.write("; multiACE disabled: " + line.lstrip())
+                    continue
+                if ins_idx is not None and _FLOW_CAL_LINE_127.match(line):
+                    out.write("; multiACE moved: " + line.lstrip())
+                    continue
+                out.write(line)
+            if ins_idx is not None and ins_idx >= i + 1:
+                out.writelines(block)
+
+
+def u1_prepare(client, path, name, plan_name, prefs, expected, report=None, forced=None):
+    """Recalcule avec le chargement du moment, ecrit le G-code pret a imprimer, le verifie.
+    forced : bobines imposees par l'utilisateur ({t: ace*4+slot}, plan « Comme tranché » seulement),
+    passees telles quelles au code de la U1 (remap_override, comme son interface web)."""
     pp, core, _sha = u1_code(client)
     live = _live(client)
     if _signature(live) != expected:
         raise MultiAceError("les bobines ont changé depuis l'analyse : vérifie la nouvelle proposition")
+    caps = _u1code.get("caps") or {}
+    extra = {}
+    if forced:
+        if plan_name != "slicer":
+            raise MultiAceError("les bobines imposées ne s'appliquent qu'au plan « Comme tranché »")
+        if not caps.get("remap"):
+            raise U1CodeError("cette version de multiACE ne permet pas d'imposer une bobine")
+        extra["remap_override"] = forced_remap(report, forced, live["live_slots"])
     folder = os.path.join(storage_dir(), "u1run")
     os.makedirs(folder, exist_ok=True)
-    tmp_a, tmp_b = os.path.join(folder, "a.gcode"), os.path.join(folder, "b.gcode")
+    tmp_a, tmp_b, tmp_c = (os.path.join(folder, n) for n in ("a.gcode", "b.gcode", "c.gcode"))
     colors, types, naces, _used, _plan, meta = core.parse_meta(pp, _read_lines(path))
     final = core.rewrite_pipeline(pp, src_path=path, tmp_a=tmp_a, tmp_b=tmp_b, slicer_colors=colors,
                                   slicer_types=types, num_aces=naces, live_slots=live["live_slots"],
                                   head_ctx=live.get("head_ctx") or {"mode": "multi"}, mode=plan_name,
-                                  meta=meta)
-    caps = _u1code.get("caps") or {}
-    if caps.get("prefs") and (prefs.get("bed") or prefs.get("cam") or prefs.get("flow")):
-        other = tmp_b if final == tmp_a else tmp_a
-        core.prepend_print_prefs(final, other, bool(prefs.get("bed")), bool(prefs.get("cam")), bool(prefs.get("flow")))
+                                  meta=meta, **extra)
+
+    def nxt(cur):
+        return next(p for p in (tmp_a, tmp_b, tmp_c) if p != cur and p != path)
+
+    if prefs.get("bed") or prefs.get("cam") or prefs.get("flow"):
+        other = nxt(final)
+        fn = core.prepend_print_prefs if caps.get("prefs") else prepend_print_prefs_127
+        fn(final, other, bool(prefs.get("bed")), bool(prefs.get("cam")), bool(prefs.get("flow")))
+        final = other
+    heads = prefs.get("flow_heads")
+    if prefs.get("flow") and isinstance(heads, list):
+        other = nxt(final)
+        limit_flow_heads(final, other, [h for h in heads if isinstance(h, int) and 0 <= h <= 3])
+        final = other
+    if prefs.get("bed") and prefs.get("zone"):
+        other = nxt(final)
+        mesh_on_print_zone(final, other)
+        final = other
+    if prefs.get("soft"):
+        other = nxt(final)
+        soft_start(final, other)
         final = other
     # Verifications du fichier produit avant tout envoi.
     if not os.path.exists(final) or os.path.getsize(final) < 1024:
@@ -1081,58 +1195,492 @@ def u1_prepare(client, path, name, plan_name, prefs, expected):
     return final
 
 
+# ---- informations du fichier tranche et du chargement (affichage seulement, aucun choix de bobine)
+
+_T_LINE = re.compile(r"^T(\d+)\s*(?:;.*)?$")
+_THUMB_RE = re.compile(r"^; thumbnail(?:_(PNG|JPG))? begin (\d+)x(\d+) \d+\s*\n(.*?)^; thumbnail(?:_(?:PNG|JPG))? end",
+                       re.M | re.S)
+
+
+def _header_value(text, key):
+    m = re.search(r"^;\s*%s\s*=\s*(.*)$" % re.escape(key), text, re.M)
+    return m.group(1).strip() if m else None
+
+
+def slice_info(path):
+    """Ce que le slicer a prevu, lu dans l'export : buse pour laquelle chaque filament est tranche,
+    grammes, ordre de premiere utilisation des filaments, vignette."""
+    head, tail = read_head_tail(path, head_bytes=1 << 20, tail_bytes=1 << 20)
+    text = head + "\n" + tail
+    vol = [NOZZLE_FR.get(v.strip().strip('"').lower(), v.strip().strip('"'))
+           for v in _split(_header_value(text, "nozzle_volume_type"))]
+    fmap = []
+    for v in _split(_header_value(text, "filament_map")):
+        try:
+            fmap.append(int(v) - 1)
+        except ValueError:
+            fmap.append(None)
+    grams = []
+    for v in _split(_header_value(text, "filament used [g]")):
+        try:
+            grams.append(float(v))
+        except ValueError:
+            grams.append(0.0)
+    sliced = []
+    for t in range(max(len(grams), len(fmap))):
+        e = fmap[t] if t < len(fmap) and fmap[t] is not None and 0 <= fmap[t] <= 3 else (t if t <= 3 else None)
+        sliced.append({"head": e, "nozzle": vol[e] if e is not None and e < len(vol) else ""})
+    want = {t for t, g in enumerate(grams) if g > 0} or None
+    order = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if line[:1] != "T":
+                continue
+            m = _T_LINE.match(line)
+            if m:
+                t = int(m.group(1))
+                if t not in order:
+                    order.append(t)
+                    if want is not None and want <= set(order):
+                        break
+    thumb, best = None, 0
+    for m in _THUMB_RE.finditer(head):
+        area = int(m.group(2)) * int(m.group(3))
+        if best < area <= 600 * 600:
+            data = "".join(l.lstrip("; ").strip() for l in m.group(4).splitlines())
+            if re.fullmatch(r"[A-Za-z0-9+/=]+", data or ""):
+                thumb = "data:image/%s;base64,%s" % ("jpeg" if m.group(1) == "JPG" else "png", data)
+                best = area
+    return {"sliced": sliced, "grams": grams, "order": order, "thumb": thumb}
+
+
+def load_info(client):
+    """Bobines des ACE (poids, PA memorise) et buses vissees, lues dans la U1. Lecture seule."""
+    try:
+        state = client.state(timeout=TIMEOUT_BG)
+    except Exception:
+        state = {}
+    spools, binding = state.get("spools") or {}, state.get("spool_binding") or {}
+    slots = {}
+    for key, sid in binding.items():
+        m = re.fullmatch(r"(\d+)_(\d+)", str(key))
+        sp = spools.get(str(sid)) if sid is not None else None
+        if not m or not isinstance(sp, dict):
+            continue
+        pam = {}
+        for k, v in (sp.get("pa_matrix") or {}).items():
+            if isinstance(v, (int, float)):
+                pam[str(k)] = float(v)
+        try:
+            w = float(sp.get("weight_g")) if sp.get("weight_g") is not None else None
+        except (TypeError, ValueError):
+            w = None
+        slots["%s_%s" % (m.group(1), m.group(2))] = {"spool": str(sid), "grams": w, "pa": pam}
+    try:
+        real, src = effective_nozzles(client)
+    except Exception:
+        real, src = load_settings()["real_nozzles"], "manuel"
+    dia = str(load_settings().get("nozzle") or "0.4")
+    try:
+        dia = "%g" % float(dia)
+    except ValueError:
+        pass
+    return {"slots": slots, "real": real, "real_src": src, "dia": dia}
+
+
+def forced_remap(report, forced, live_slots):
+    """Bobines imposees par l'utilisateur -> remap_override du code multiACE (format de son interface
+    web : {"t": ace*4+slot}), appliqué tel quel par la U1. Aucune decision prise ici."""
+    plan = ((report or {}).get("plans") or {}).get("slicer") or {}
+    present = {int(s["ace"]) * 4 + int(s["slot"]) for s in live_slots or []
+               if isinstance(s.get("ace"), int) and isinstance(s.get("slot"), int)}
+    known = {int(c["t"]) for c in (report or {}).get("slicer_colors") or [] if isinstance(c.get("t"), int)}
+    eff = {}
+    for m in plan.get("mapping") or []:
+        s = m.get("slot") or {}
+        if isinstance(m.get("t"), int) and isinstance(s.get("ace"), int) and isinstance(s.get("slot"), int):
+            eff[m["t"]] = s["ace"] * 4 + s["slot"]
+    for k, v in (forced or {}).items():
+        try:
+            t, synth = int(k), int(v)
+        except (TypeError, ValueError):
+            raise MultiAceError("choix de bobine illisible")
+        if t not in known or synth not in present:
+            raise MultiAceError("bobine choisie absente des ACE : recharge la proposition")
+        eff[t] = synth
+    return {str(t): s for t, s in eff.items() if s != t}
+
+
+_MESH_LINE = re.compile(r"^(\s*BED_MESH_CALIBRATE\b)([^;\n]*)(.*)$", re.I)
+_EXCL_POLY = re.compile(r"^EXCLUDE_OBJECT_DEFINE\b.*?\bPOLYGON=(\[\[.*\]\])", re.I)
+MESH_MARGIN = 5.0     # mm autour de la zone imprimee
+
+
+def _print_zone(path):
+    """Contour de ce qui est imprime sur le plateau : objets declares (EXCLUDE_OBJECT_DEFINE) et tout ce
+    qui est extrude a la 1re couche (tour de purge, jupe, bordure comprises)."""
+    xs, ys = [], []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        layers, x, y = 0, None, None
+        for line in f:
+            m = _EXCL_POLY.match(line)
+            if m:
+                try:
+                    for px, py in json.loads(m.group(1)):
+                        xs.append(float(px))
+                        ys.append(float(py))
+                except (ValueError, TypeError):
+                    pass
+                continue
+            if line.startswith(";LAYER_CHANGE") or line.startswith("; LAYER_CHANGE"):
+                layers += 1
+                if layers > 1:
+                    break
+                continue
+            if layers == 1 and line[:2] in ("G0", "G1"):
+                mx = re.search(r"\bX(-?\d+(?:\.\d*)?)", line)
+                my = re.search(r"\bY(-?\d+(?:\.\d*)?)", line)
+                x = float(mx.group(1)) if mx else x
+                y = float(my.group(1)) if my else y
+                me = re.search(r"\bE(-?\d+(?:\.\d*)?)", line)
+                if me and float(me.group(1)) > 0 and x is not None and y is not None:
+                    xs.append(x)
+                    ys.append(y)
+    if not xs:
+        return None
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def _pair(text, key):
+    m = re.search(r"\b%s\s*=\s*(-?\d+(?:\.\d*)?)\s*[,x]\s*(-?\d+(?:\.\d*)?)" % key, text, re.I)
+    return (float(m.group(1)), float(m.group(2))) if m else None
+
+
+def mesh_on_print_zone(in_path, out_path):
+    """Maillage du plateau limite a la zone imprimee : le BED_MESH_CALIBRATE du debut qui palpe tout le
+    plateau recoit MESH_MIN / MESH_MAX (commande Klipper standard, geree par le firmware de la U1) et
+    un nombre de points qui garde l'ecart d'origine. Rien n'est touche si la ligne vise deja une zone
+    (profil avec maillage adaptatif) ou si la zone est introuvable. Retourne le texte de la ligne."""
+    head, tail = read_head_tail(in_path, head_bytes=1 << 20, tail_bytes=1 << 20)
+    cfg = tail + "\n" + head
+    lo = _pair(cfg, r";\s*bed_mesh_min") or (3.0, 3.0)
+    hi = _pair(cfg, r";\s*bed_mesh_max") or (267.0, 267.0)
+    zone = _print_zone(in_path)
+    done = None
+    with open(in_path, "r", encoding="utf-8", errors="replace") as src, \
+            open(out_path, "w", encoding="utf-8", newline="\n") as out:
+        for line in src:
+            if done is None:
+                m = _MESH_LINE.match(line)
+                if m:
+                    args = m.group(2)
+                    if zone is None or re.search(r"\bMESH_M(IN|AX)\s*=|\bADAPTIVE\s*=\s*1", args, re.I):
+                        done = ""
+                    else:
+                        x0 = max(lo[0], zone[0] - MESH_MARGIN)
+                        y0 = max(lo[1], zone[1] - MESH_MARGIN)
+                        x1 = min(hi[0], zone[2] + MESH_MARGIN)
+                        y1 = min(hi[1], zone[3] + MESH_MARGIN)
+                        pc = _pair(args, "PROBE_COUNT") or (11.0, 11.0)
+                        dx = (hi[0] - lo[0]) / max(1.0, pc[0] - 1)
+                        dy = (hi[1] - lo[1]) / max(1.0, pc[1] - 1)
+                        nx = max(4, min(int(pc[0]), int(-(-(x1 - x0) // dx)) + 1))
+                        ny = max(4, min(int(pc[1]), int(-(-(y1 - y0) // dy)) + 1))
+                        if x1 - x0 < 10 or y1 - y0 < 10:
+                            done = ""
+                        else:
+                            rest = re.sub(r"\bPROBE_COUNT\s*=\s*\S+", "", args, flags=re.I).strip()
+                            new = "%s MESH_MIN=%.2f,%.2f MESH_MAX=%.2f,%.2f PROBE_COUNT=%d,%d%s%s" % (
+                                m.group(1).rstrip(), x0, y0, x1, y1, nx, ny, (" " + rest) if rest else "",
+                                (" " + m.group(3)) if m.group(3) else "")
+                            out.write("; multiACE Bridge: maillage limite a la zone imprimee (avant : %s)\n"
+                                      % line.strip())
+                            out.write(new.rstrip() + "\n")
+                            done = new.strip()
+                            continue
+            out.write(line)
+    return done or ""
+
+
+_AUTO_END = re.compile(r"^\s*;\s*multiACE auto-load: end\b")
+_MESH_ANY = re.compile(r"^\s*(?:BED_MESH_CALIBRATE|AUTO_BED_MESH_CALIBRATE)\b", re.I)
+_LAYER_CH = re.compile(r"^\s*;\s*LAYER_CHANGE\b")
+_M204 = re.compile(r"^\s*M204\s+S(\d+)", re.I)
+_TRAVEL = re.compile(r"^(\s*G[01]\b)([^;]*?)\bF(\d+(?:\.\d*)?)([^;]*)(;.*)?$", re.I)
+SOFT_START_F = 6000         # mm/min (100 mm/s) : vitesse max des deplacements avant la 1re couche
+SOFT_START_ACCEL = 3000     # mm/s2 pendant ces deplacements
+SOFT_START_LIFT = 5         # mm : on remonte d'abord la buse
+
+
+def soft_start(in_path, out_path):
+    """Depart en douceur (repris de la 0.33) : entre la fin du chargement auto (ou du maillage du plateau)
+    et la 1re couche, les deplacements sans extrusion plus rapides que SOFT_START_F sont ralentis, avec
+    une acceleration reduite, et la buse remonte d'abord de SOFT_START_LIFT mm. Evite le choc de la tete
+    qui traverse le plateau a 300 mm/s vers la ligne d'amorce. Retourne le nombre de lignes ralenties."""
+    end_idx = mesh_idx = layer_idx = None
+    accel = 10000
+    with open(in_path, "r", encoding="utf-8", errors="replace") as src:
+        for i, line in enumerate(src):
+            if _AUTO_END.match(line):
+                end_idx = i
+            elif _MESH_ANY.match(line):
+                mesh_idx = i
+            elif _LAYER_CH.match(line):
+                layer_idx = i
+                break
+            else:
+                m = _M204.match(line)
+                if m:
+                    accel = int(m.group(1))
+    start = end_idx if end_idx is not None else mesh_idx
+    if mesh_idx is not None and start is not None:
+        start = max(start, mesh_idx)
+    done = 0
+    on = False
+    with open(in_path, "r", encoding="utf-8", errors="replace") as src, \
+            open(out_path, "w", encoding="utf-8", newline="\n") as out:
+        for i, line in enumerate(src):
+            if start is not None and layer_idx is not None and start < i < layer_idx:
+                t = _TRAVEL.match(line)
+                if t and " E" not in (" " + t.group(2) + t.group(4)).upper() and float(t.group(3)) > SOFT_START_F \
+                        and re.search(r"\b[XY]-?\d", t.group(2) + t.group(4), re.I):
+                    if not on:
+                        on = True
+                        out.write("; multiACE Bridge: deplacement doux vers la ligne d'amorce\n")
+                        out.write("M204 S%d\nG91\nG1 Z%d F1200\nG90\n" % (SOFT_START_ACCEL, SOFT_START_LIFT))
+                    out.write("%s%sF%d%s ; multiACE Bridge: F%s ralenti\n"
+                              % (t.group(1), t.group(2), SOFT_START_F, t.group(4).rstrip(), t.group(3)))
+                    done += 1
+                    continue
+            if on and i == layer_idx:
+                out.write("M204 S%d ; multiACE Bridge: acceleration d'origine\n" % accel)
+                on = False
+            out.write(line)
+    return done
+
+
+_FLOW_PAIR = re.compile(r"^\s*(?:T(\d+)\s+A0|FLOW_CALIBRATE\s+EXTRUDER=(\d+))\s*$", re.I)
+
+
+def limit_flow_heads(in_path, out_path, heads):
+    """Calibration du flux seulement sur les tetes cochees : dans le bloc ajoute par multiACE, les paires
+    T<h> A0 / FLOW_CALIBRATE des autres tetes sont mises en commentaire (elles gardent le PA memorise)."""
+    keep = {int(h) for h in heads}
+    inside = False
+    with open(in_path, "r", encoding="utf-8", errors="replace") as src, \
+            open(out_path, "w", encoding="utf-8", newline="\n") as out:
+        for line in src:
+            low = line.lower()
+            if "flow calibration" in low and line.lstrip().startswith(";"):
+                inside = not low.rstrip().endswith("end")
+                out.write(line)
+                continue
+            if inside:
+                m = _FLOW_PAIR.match(line)
+                if m:
+                    h = int(m.group(1) or m.group(2))
+                    if h not in keep:
+                        out.write("; multiACE Bridge skipped: " + line.lstrip())
+                        continue
+            out.write(line)
+
+
+
 U1_PAGE = r"""<!doctype html><html lang="fr"><head><meta charset="utf-8">
 <style>
-body{margin:0;background:#15181c;color:#e8eeef;font:14px/1.45 "Segoe UI",Inter,Arial,sans-serif}
-.w{padding:18px 20px}h1{font-size:18px;margin:0 0 4px}.sub{color:#8fa3a5;font-size:12px;margin-bottom:12px}
-.card{background:#1d2228;border:1px solid #2a3138;border-radius:10px;padding:12px 14px;margin:10px 0}
-.warn{border-color:#8a6d1f;background:#2a2414}.err{border-color:#8a2b2b;background:#2a1717}.ok{border-color:#1f6b5f;background:#13302b}
-label.plan{display:flex;gap:10px;align-items:center;padding:6px 0;cursor:pointer}
-table{border-collapse:collapse;width:100%;margin-top:6px}td,th{padding:4px 6px;text-align:left;font-size:13px}th{color:#8fa3a5;font-weight:600}
-.sw{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #0006;vertical-align:-2px;margin-right:6px}
-.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}button{background:#24303a;color:#e8eeef;border:1px solid #33414c;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
-button.main{background:#3fd0bf;color:#0d2a26;border-color:#3fd0bf;font-weight:600}button:disabled{opacity:.45;cursor:default}
-.opts label{margin-right:16px}.muted{color:#8fa3a5}
-</style></head><body><div class="w" id="app"></div>
+:root{--fg:#e9ecef;--muted:#9aa3ad;--line:rgba(255,255,255,.12);--accent:#009688;--bad:#e05a4f;--warn:#e0a030;
+  color-scheme:dark;font:13px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+*{box-sizing:border-box}body{margin:0;padding:16px 18px 24px;background:#1b1e22;color:var(--fg)}
+.hdr{display:flex;gap:14px;align-items:center;margin-bottom:12px}
+.hdr img{width:92px;height:92px;object-fit:contain;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+h1{font-size:16px;margin:0 0 2px;word-break:break-all}.sub{color:var(--muted);margin:0;font-size:12px}
+.banner{border-radius:8px;padding:9px 12px;margin-bottom:10px;background:rgba(80,120,255,.14);color:#c9d3ff}
+.alerts{border-radius:8px;padding:9px 12px;margin-bottom:10px;background:rgba(224,160,48,.13);color:#f1c27d}.alerts div{margin:2px 0}
+.err{background:rgba(224,90,79,.15);border-radius:8px;padding:12px;margin-bottom:12px}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.stat{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:9px;padding:8px 12px;min-width:120px}
+.stat b{display:block;font-size:20px;font-variant-numeric:tabular-nums}.stat span{color:var(--muted);font-size:11.5px}
+.plans{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.plans label{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
+.plans label.on{border-color:var(--accent);background:rgba(0,150,136,.12)}.plans label.off{opacity:.45;cursor:default}
+table{width:100%;border-collapse:collapse;margin-bottom:8px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);text-align:left;font-weight:600;padding:4px 6px;border-bottom:1px solid var(--line)}
+td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle}
+.sw{display:inline-block;width:16px;height:16px;border-radius:50%;border:1px solid rgba(255,255,255,.3);vertical-align:-3px;margin-right:6px;flex:none}
+.arrow{color:var(--muted);text-align:center}
+.tag{font-size:11px;border-radius:4px;padding:1px 6px;background:rgba(0,150,136,.18);color:#4fd1c0;white-space:nowrap;margin-right:4px}
+.tag.warn{background:rgba(224,160,48,.18);color:var(--warn)}.tag.man{background:rgba(120,140,255,.18);color:#aab6ff}
+.tag.noz{background:rgba(224,90,79,.18);color:#f08a80}
+small,.muted{color:var(--muted)}
+.pick{position:relative;width:340px}
+td:first-child{min-width:190px}td:nth-child(3){min-width:170px}
+.pk{width:100%;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit;cursor:pointer;text-align:left}
+.pk .lbl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pk .car{color:var(--muted);font-size:10px}
+.pk.changed{border-color:#aab6ff}
+.menu{position:absolute;z-index:10;right:0;top:calc(100% + 3px);background:#25292e;border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.5);max-height:320px;overflow:auto;min-width:100%;width:max-content;max-width:520px}
+.menu div{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px;cursor:pointer;white-space:nowrap}
+.menu div:hover,.menu div.sel{background:rgba(255,255,255,.08)}.menu .sep{height:1px;padding:0;margin:3px 4px;background:var(--line);cursor:default}
+.hint{color:var(--muted);font-size:11.5px;margin:0 0 12px}
+.card{border-radius:8px;padding:12px;margin-bottom:12px;background:rgba(255,255,255,.04)}
+.opt{display:flex;align-items:center;gap:6px;margin:6px 0 0;cursor:pointer}.optsub{margin:4px 0 4px 24px;font-size:12px}
+.optsub .opt{margin:3px 0}.okc{color:#4fd1c0}.warnc{color:#f0b060}
+button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}button.mini{padding:2px 8px;font-size:11px;margin-left:6px}
+button:disabled{opacity:.4;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+#msg{margin-top:8px}.msg.ok{color:#3fb27f}.msg.bad{background:rgba(224,90,79,.15);border-radius:8px;padding:8px}
+.loading{display:flex;align-items:center;gap:12px;padding:30px 0;color:var(--muted)}
+.spin{width:22px;height:22px;border:3px solid rgba(255,255,255,.15);border-top-color:#009688;border-radius:50%;animation:r 1s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+</style></head><body><div id="app"></div>
 <script>
 var D=__DATA__;
 (function(){
-function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
-function col(c){var m=/^#?([0-9a-fA-F]{6})/.exec(String(c||""));return m?"#"+m[1]:"#777"}
-var sel=null,busy=false,msg=null;
+var S={sel:null,forced:{},flow:null,busy:false,msg:null,open:null};
+function esc(x){var d=document.createElement("span");d.textContent=x==null?"":String(x);return d.innerHTML}
+function col(c){var m=/^#?([0-9a-fA-F]{6})/.exec(String(c||"").trim());return m?"#"+m[1]:"#777"}
 function post(m){try{window.orca.postMessage(m)}catch(e){try{window.chrome.webview.postMessage(m)}catch(_){}}}
-function render(){
-  var a=document.getElementById("app"),h='<h1>multiACE Preflight : '+esc(D.name||"")+'</h1>';
-  h+='<div class="sub">Calcul fait par le code multiACE de ta U1'+(D.version?' (version '+esc(D.version)+')':'')+(D.sha?' · '+esc(D.sha):'')+'. Le plugin ne choisit rien lui-même.</div>';
-  if(D.banner)h+='<div class="card warn">'+esc(D.banner)+'</div>';
-  if(D.loading)h+='<div class="card">'+esc(D.loading)+'</div>';
-  if(D.error)h+='<div class="card err">'+esc(D.error)+'</div>';
-  var r=D.report;
-  if(r){
-    if(r.missing_materials&&r.missing_materials.length)h+='<div class="card err">Matière absente des ACE : '+esc(JSON.stringify(r.missing_materials))+'</div>';
-    if(r.nozzles_mixed)h+='<div class="card warn">Buses de diamètres différents dans ce fichier : vérifie la proposition.</div>';
-    var names={};(r.slicer_colors||[]).forEach(function(c){names[c.t]=c});
-    var order=["slicer","optimize","layer"];h+='<div class="card">';
-    order.forEach(function(k){var p=(r.plans||{})[k];if(!p)return;if(sel===null&&p.feasible)sel=k;
-      h+='<label class="plan"><input type="radio" name="p" value="'+k+'"'+(sel===k?' checked':'')+(p.feasible?'':' disabled')+'> <b>'+esc(D.labels[k]||k)+'</b> <span class="muted">'+(p.feasible?(p.swaps+' échange(s) de bobine'):esc(p.reason||'impossible'))+'</span></label>';});
-    var p=(r.plans||{})[sel];
-    if(p&&p.mapping&&p.mapping.length){h+='<table><tr><th>Filament</th><th>Bobine</th></tr>';
-      p.mapping.forEach(function(m){var c=names[m.t]||{},s=m.slot;h+='<tr><td><span class="sw" style="background:'+col(c.hex)+'"></span>'+(m.t+1)+' · '+esc(c.material||"")+' '+esc(c.name||"")+'</td><td>'+(s?('<span class="sw" style="background:'+col(s.color)+'"></span>ACE '+(s.ace+1)+' · slot '+(s.slot+1)+' · '+esc(s.material||"")):'<span class="muted">aucune</span>')+(m.loose_mat?' <span class="muted">(matière différente)</span>':'')+(/fuzzy|fallback|base|canon/.test(m.tier||'')?' <span class="muted">(couleur approchante)</span>':'')+'</td></tr>'});
-      h+='</table>';}
-    if(r._prefs_ok===false)h+='</div><div class="card"><b>Au lancement</b> : cette version de multiACE ne fournit pas ces options au plugin. La U1 garde ses réglages ; pour les choisir, utilise « Ouvrir dans le Preflight multiACE ».';else h+='</div><div class="card opts"><b>Au lancement</b> (préférences multiACE)<br><label><input type="checkbox" id="bed"'+(D.prefs.bed?' checked':'')+'> Maillage du plateau</label><label><input type="checkbox" id="flow"'+(D.prefs.flow?' checked':'')+'> Calibration du flux</label><label><input type="checkbox" id="cam"'+(D.prefs.cam?' checked':'')+'> Time-lapse</label></div>';
-  }
-  if(msg)h+='<div class="card '+(msg.ok?'ok':'err')+'">'+esc(msg.text)+'</div>';
-  h+='<div class="btns">';
-  if(r)h+='<button class="main" id="go"'+(busy||!sel?' disabled':'')+'>Imprimer</button>';
-  h+='<button id="pf"'+(busy?' disabled':'')+'>Ouvrir dans le Preflight multiACE</button><button id="x">Fermer</button></div>';
-  a.innerHTML=h;
-  Array.prototype.forEach.call(document.querySelectorAll('input[name=p]'),function(i){i.onchange=function(){sel=i.value;render()}});
-  var g=document.getElementById("go");if(g)g.onclick=function(){busy=true;msg=null;render();var gv=function(i){var e=document.getElementById(i);return !!(e&&e.checked)};post({a:"print",plan:sel,bed:gv("bed"),flow:gv("flow"),cam:gv("cam")})};
-  document.getElementById("pf").onclick=function(){busy=true;msg=null;render();post({a:"preflight"})};
-  document.getElementById("x").onclick=function(){post({a:"close"})};
+function rgb(h){h=col(h).slice(1);return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]}
+function cname(h){
+  var c=rgb(h),r=c[0]/255,g=c[1]/255,b=c[2]/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,d=mx-mn,s=0,hu=0;
+  if(d>0){s=d/(1-Math.abs(2*l-1));hu=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4;hu=(hu*60+360)%360}
+  if(l>0.9)return "Blanc";if(l<0.1)return "Noir";
+  if(s<0.15)return l>0.7?"Gris clair":l<0.32?"Gris foncé":"Gris";
+  if(hu<12||hu>=345)return l<0.3?"Bordeaux":l>0.75?"Rose":"Rouge";
+  if(hu<42)return (l<0.45||s<0.45)?(l>0.6?"Beige":"Marron"):(l>0.75?"Pêche":"Orange");
+  if(hu<66)return l<0.35?"Kaki":(s<0.5&&l>0.7?"Crème":"Jaune");
+  if(hu<160)return l<0.28?"Vert foncé":l>0.7?"Vert clair":"Vert";
+  if(hu<195)return l>0.7?"Cyan clair":"Turquoise";
+  if(hu<250)return l<0.3?"Bleu foncé":l>0.7?"Bleu clair":"Bleu";
+  if(hu<290)return l>0.7?"Lavande":"Violet";
+  return (s>0.6&&l<0.55)?"Magenta":"Rose";
 }
-window.__orca_on_message=function(m){if(m.type==="data"){D=m.data;sel=null;busy=false}else if(m.type==="done"){busy=false;msg=m;if(m.final)busy=true}render()};
+function sw(h){return '<span class="sw" style="background:'+col(h)+'"></span>'}
+var TIER={exact_hex:"couleur identique",name_exact:"même nom de couleur",name_base:"nom de couleur proche",name_canon:"nom de couleur proche",
+  fuzzy:"couleur proche (nuance)",fallback:"même matière, autre couleur",duplicate:"bobine partagée",planned:"prévu",no_slot:"aucune bobine"};
+function tierTag(t){if(!t)return "";var loose=/^loose_/.test(t),b=t.replace(/^loose_/,""),w=/fallback|duplicate|no_slot/.test(b)||loose;
+  return '<span class="tag'+(w?' warn':'')+'">'+esc(TIER[b]||b)+'</span>'+(loose?'<span class="tag warn">matière différente</span>':'')}
+function L(){return D.load||{slots:{},real:["","","",""],dia:"0.4"}}
+function I(){return D.info||{sliced:[],grams:[],order:[]}}
+function live(){return (D.report&&D.report.live_slots)||[]}
+function synth(s){return s.ace*4+s.slot}
+function slotBy(n){var a=live();for(var i=0;i<a.length;i++)if(synth(a[i])===n)return a[i];return null}
+function realOf(h){var r=L().real||[];return h!=null&&h>=0&&h<4?(r[h]||""):""}
+function vt(n){return n==="Haut débit"?"high_flow":n==="Standard"?"standard":""}
+function grams(s){var x=L().slots[s.ace+"_"+s.slot];return x&&x.grams>0?' · ≈ '+Math.round(x.grams)+' g':''}
+function forcedOn(){return Object.keys(S.forced).length>0}
+function planKey(){return forcedOn()?"slicer":S.sel}
+function mapping(){
+  var r=D.report||{},p=(r.plans||{})[planKey()]||{},out=[];
+  (p.mapping||[]).forEach(function(m){var s=m.slot;var row={t:m.t,slot:s?{ace:s.ace,slot:s.slot,material:s.material,color:s.color}:null,tier:m.tier,loose:m.loose_mat};
+    if(S.forced[m.t]!=null){var f=slotBy(S.forced[m.t]);if(f){row.slot={ace:f.ace,slot:f.slot,material:f.material,color:f.color,name:f.name};row.tier="manual"}}
+    out.push(row)});
+  return out}
+function headOf(row){return row.slot?row.slot.slot:null}
+function nozWarn(row){var sl=(I().sliced||[])[row.t]||{},h=headOf(row),real=realOf(h);
+  if(!sl.nozzle||!real||h==null||sl.nozzle===real)return null;
+  return {sliced:sl.nozzle,shead:sl.head,real:real,head:h}}
+function startHeads(rows){var byT={},seen={},out=[];rows.forEach(function(r){byT[r.t]=r});
+  var order=(I().order||[]).slice();rows.forEach(function(r){if(order.indexOf(r.t)<0)order.push(r.t)});
+  order.forEach(function(t){var r=byT[t];if(!r||!r.slot)return;var h=headOf(r);if(seen[h])return;seen[h]=1;out.push(r)});return out}
+function paOf(row){var x=L().slots[row.slot.ace+"_"+row.slot.slot];var k=L().dia+"_"+vt(realOf(headOf(row)));
+  return {spool:x?x.spool:null,pa:x&&x.pa&&x.pa[k]!=null?x.pa[k]:null}}
+function cn(c){return (c&&c.name)||cname(c&&(c.hex||c.color))}
+function spoolTxt(x,sl,auto){var rl=realOf(x.slot),bad=sl&&sl.nozzle&&rl&&sl.nozzle!==rl;
+  return sw(x.color)+'<span class="lbl">'+(auto?'<b>Automatique</b> · ':'')+esc(cname(x.color))+' <small>'+esc(x.material||'')+' · ACE '+(x.ace+1)+' · slot '+(x.slot+1)+' → T'+(x.slot+1)+(rl?' · '+esc(rl):'')+esc(grams(x))+'</small></span>'+
+    (bad?'<span class="tag noz">buse ≠ '+esc(sl.nozzle)+'</span>':'')}
+function autoSlot(t){var r=D.report||{},p=(r.plans||{})[planKey()||"slicer"]||{},m=(p.mapping||[]).filter(function(x){return x.t===t})[0];return m&&m.slot?m.slot:null}
+
+function render(){
+  var a=document.getElementById("app"),r=D.report,h='';
+  h+='<div class="hdr">'+(D.info&&D.info.thumb?'<img src="'+esc(D.info.thumb)+'" alt="">':'')+'<div><h1>'+esc(D.name||"multiACE Preflight")+'</h1>';
+  h+='<p class="sub">Calcul fait par le code multiACE de ta U1'+(D.version?' (version '+esc(D.version)+')':'')+(D.sha?' · '+esc(D.sha):'')+'. Le plugin affiche et applique, la U1 décide.</p></div></div>';
+  if(D.banner)h+='<div class="banner">'+esc(D.banner)+'</div>';
+  if(D.loading&&!r)h+='<div class="loading"><div class="spin"></div>'+esc(D.loading)+'</div>';
+  if(D.error)h+='<div class="err">'+esc(D.error)+'</div>';
+  if(r){
+    var plans=r.plans||{};
+    if(S.sel===null)["slicer","optimize","layer"].forEach(function(k){if(S.sel===null&&plans[k]&&plans[k].feasible)S.sel=k});
+    var rows=mapping(),colors={};(r.slicer_colors||[]).forEach(function(c){colors[c.t]=c});
+    var al=[];
+    if(r.missing_materials&&r.missing_materials.length)al.push("Matière absente des ACE : "+r.missing_materials.join(", "));
+    rows.forEach(function(row){var w=nozWarn(row);if(w)al.push("⚠ Filament "+(row.t+1)+" : tranché pour une buse "+w.sliced+(w.shead!=null?" (T"+(w.shead+1)+")":"")+", imprimé sur T"+(w.head+1)+" ("+w.real+").");
+      if(!row.slot)al.push("Filament "+(row.t+1)+" : aucune bobine dans les ACE.")});
+    if(r.nozzles_mixed)al.push("Buses de diamètres différents dans ce fichier : vérifie la proposition.");
+    if(al.length)h+='<div class="alerts">'+al.map(function(x){return '<div>'+esc(x)+'</div>'}).join("")+'</div>';
+    var p=plans[planKey()]||{},st=startHeads(rows);
+    h+='<div class="stats"><div class="stat"><b>'+(p.tool_changes!=null?p.tool_changes:"–")+'</b><span>changements d’outil</span></div>'+
+       '<div class="stat"><b>'+(p.swaps!=null?p.swaps:"–")+'</b><span>échanges de bobine (ACE)'+(forcedOn()?' · avant tes choix':'')+'</span></div>'+
+       '<div class="stat"><b>'+st.length+'</b><span>tête(s) chargée(s) au départ</span></div>'+
+       '<div class="stat"><b>'+rows.length+'</b><span>couleur(s) du fichier</span></div></div>';
+    h+='<div class="plans">';["slicer","optimize","layer"].forEach(function(k){var q=plans[k];if(!q)return;var on=planKey()===k,dis=!q.feasible||(forcedOn()&&k!=="slicer");
+      h+='<label class="'+(on?'on':'')+(dis?' off':'')+'"><input type="radio" name="p" value="'+k+'"'+(on?' checked':'')+(dis?' disabled':'')+'><b>'+esc((D.labels||{})[k]||k)+'</b> <small>'+(q.feasible?q.swaps+' échange(s)':esc(q.reason||'impossible'))+'</small></label>'});
+    h+='</div>';
+    h+='<table><tr><th>Slicer</th><th></th><th>Bobine</th><th>Correspondance</th>'+(D.can_force?'<th>Forcer une bobine</th>':'')+'</tr>';
+    rows.forEach(function(row){var c=colors[row.t]||{},sl=(I().sliced||[])[row.t]||{},g=(I().grams||[])[row.t],s=row.slot,w=nozWarn(row);
+      h+='<tr><td>'+sw(c.hex)+'<b>Filament '+(row.t+1)+'</b> · '+esc(cn(c))+' <small>'+esc(c.material||"")+(g>0?' '+(g<10?g.toFixed(1):Math.round(g))+' g':'')+'</small>'+
+        (sl.head!=null?'<br><small>tranché pour T'+(sl.head+1)+(sl.nozzle?' · '+esc(sl.nozzle):'')+'</small>':'')+'</td><td class="arrow">→</td>';
+      h+='<td>'+(s?sw(s.color)+esc(s.name||cname(s.color))+' <small>ACE '+(s.ace+1)+' · slot '+(s.slot+1)+' → T'+(s.slot+1)+(realOf(s.slot)?' · '+esc(realOf(s.slot)):'')+esc(grams(s))+'</small>':'<small>aucune</small>')+'</td>';
+      h+='<td>'+(row.tier==="manual"?'<span class="tag man">choix manuel</span>':tierTag(row.tier))+(row.loose&&row.tier!=="manual"?'<span class="tag warn">matière différente</span>':'')+
+        (s&&c.material&&s.material&&String(s.material).toUpperCase()!==String(c.material).toUpperCase()&&row.tier==="manual"?'<span class="tag warn">matière ≠</span>':'')+
+        (w?'<span class="tag noz">buse '+esc(w.real)+' ≠ '+esc(w.sliced)+'</span>':'')+'</td>';
+      if(D.can_force){var cur=S.forced[row.t]!=null?slotBy(S.forced[row.t]):null,au=autoSlot(row.t);
+        h+='<td><div class="pick"><button type="button" class="pk'+(cur?' changed':'')+'" data-pk="'+row.t+'">'+
+          (cur?spoolTxt(cur,sl,false):au?spoolTxt(au,sl,true):'<span class="lbl"><b>Automatique</b> <small>(aucune bobine)</small></span>')+'<span class="car">▾</span></button>';
+        if(S.open===row.t){h+='<div class="menu"><div data-ch="'+row.t+'" data-v=""'+(cur?'':' class="sel"')+'>'+(au?spoolTxt(au,sl,true):'<span class="lbl"><b>Automatique</b> (choix de la U1)</span>')+'</div><div class="sep"></div>';
+          live().forEach(function(x){var n=synth(x);h+='<div data-ch="'+row.t+'" data-v="'+n+'"'+(S.forced[row.t]===n?' class="sel"':'')+'>'+spoolTxt(x,sl,false)+'</div>'});
+          h+='</div>'}
+        h+='</div></td>'}
+      h+='</tr>'});
+    h+='</table>';
+    if(D.can_force)h+='<p class="hint">Choisis une bobine dans la dernière colonne pour imposer ta couleur : le plan passe sur « Comme tranché » et la U1 applique tes choix tels quels (comme dans son Preflight). Le type de buse de chaque tête est rappelé.'+(forcedOn()?' <button class="ghost mini" id="unforce">Revenir au choix de la U1</button>':'')+'</p>';
+    else h+='<p class="hint">Cette version de multiACE ne permet pas d’imposer une bobine depuis Orca : utilise « Ouvrir dans le Preflight multiACE ».</p>';
+    // Au lancement
+    var P=D.prefs||{},startIds=st.map(function(x){return headOf(x)});
+    if(S.flow===null)S.flow=startIds.slice();
+    h+='<div class="card"><b>Au lancement</b>'+(r._prefs_ok===false?' <small>(méthode de multiACE 1.27b)</small>':'');
+    h+='<label class="opt"><input type="checkbox" id="bed"'+(P.bed?' checked':'')+'> Calibration du plateau</label>';
+    h+='<div class="optsub"><label class="opt"><input type="checkbox" id="zone"'+(P.zone?' checked':'')+(P.bed?'':' disabled')+'> seulement la zone imprimée <small>(le profil palpe tout le plateau : ajoute MESH_MIN / MESH_MAX, rien ne change si ton profil le fait déjà)</small></label></div>';
+    h+='<label class="opt"><input type="checkbox" id="flow"'+(P.flow?' checked':'')+'> Calibration du flux (PA) au départ</label>';
+    h+='<div class="optsub"><div class="muted">Mesurées au départ (têtes chargées) :</div>';
+    st.forEach(function(x){var hd=headOf(x),c=colors[x.t]||{};h+='<label class="opt"><input type="checkbox" class="fh" data-h="'+hd+'"'+(S.flow.indexOf(hd)>=0?' checked':'')+(P.flow?'':' disabled')+'> T'+(hd+1)+' · '+sw(x.slot.color)+esc(cn(c))+' <small>filament '+(x.t+1)+'</small></label>'});
+    rows.forEach(function(x){if(!x.slot||st.indexOf(x)>=0)return;var pa=paOf(x),c=colors[x.t]||{},hd=headOf(x);
+      h+='<div class="opt">'+sw(x.slot.color)+esc(cn(c))+' <small>filament '+(x.t+1)+' · arrive en cours d’impression (T'+(hd+1)+')</small> — '+
+        (pa.pa!=null?'<span class="okc">PA mémorisé '+pa.pa.toFixed(4)+'</span>':'<span class="warnc">pas de PA mémorisé'+(pa.spool?'':' (aucune bobine associée au slot)')+'</span>')+
+        (pa.spool?'<button class="ghost mini" data-pre="'+hd+'_'+x.slot.ace+'_'+x.slot.slot+'">Calibrer avant</button>':'')+'</div>'});
+    h+='</div><label class="opt"><input type="checkbox" id="soft"'+(P.soft?' checked':'')+'> Déplacement doux vers la ligne d’amorce <small>(après les calibrations : 100 mm/s, accélération réduite, buse remontée de 5 mm avant)</small></label>';
+    h+='<label class="opt"><input type="checkbox" id="cam"'+(P.cam?' checked':'')+'> Time-lapse caméra</label></div>';
+  }
+  if(S.msg)h+='<div id="msg" class="msg '+(S.msg.ok?'ok':'bad')+'">'+esc(S.msg.text)+'</div>';
+  h+='<div class="row">';
+  if(r)h+='<button id="go"'+(S.busy||!planKey()?' disabled':'')+'>Lancer l’impression</button><button class="ghost" id="up"'+(S.busy||!planKey()?' disabled':'')+'>Envoyer sur la U1 sans lancer</button>';
+  h+='<button class="ghost" id="pf"'+(S.busy?' disabled':'')+'>Ouvrir dans le Preflight multiACE</button>'+(r?'<button class="ghost" id="rl"'+(S.busy?' disabled':'')+'>Recharger</button>':'')+'<button class="ghost" id="x">Fermer</button></div>';
+  a.innerHTML=h;bind();
+}
+function gv(i){var e=document.getElementById(i);return !!(e&&e.checked)}
+function send(act){S.busy=true;S.msg=null;var fh=[];Array.prototype.forEach.call(document.querySelectorAll(".fh"),function(e){if(e.checked)fh.push(+e.dataset.h)});
+  var f={};Object.keys(S.forced).forEach(function(k){f[k]=S.forced[k]});
+  var m={a:act,plan:planKey(),bed:gv("bed"),zone:gv("zone"),flow:gv("flow"),cam:gv("cam"),soft:gv("soft"),flow_heads:fh,forced:f};
+  D.prefs={bed:m.bed,zone:m.zone,flow:m.flow,cam:m.cam,soft:m.soft};render();post(m)}
+function bind(){
+  var q=function(s){return document.querySelectorAll(s)},on=function(i,f){var e=document.getElementById(i);if(e)e.onclick=f};
+  Array.prototype.forEach.call(q('input[name=p]'),function(i){i.onchange=function(){S.sel=i.value;S.flow=null;render()}});
+  Array.prototype.forEach.call(q('[data-pk]'),function(e){e.onclick=function(ev){ev.stopPropagation();var t=+e.dataset.pk;S.open=S.open===t?null:t;render()}});
+  Array.prototype.forEach.call(q('[data-ch]'),function(e){e.onclick=function(ev){ev.stopPropagation();var t=+e.dataset.ch;if(e.dataset.v==="")delete S.forced[t];else S.forced[t]=+e.dataset.v;S.open=null;S.flow=null;render()}});
+  Array.prototype.forEach.call(q('.fh'),function(e){e.onchange=function(){var h=+e.dataset.h,i=S.flow.indexOf(h);if(e.checked&&i<0)S.flow.push(h);if(!e.checked&&i>=0)S.flow.splice(i,1)}});
+  ["bed","flow","zone","cam","soft"].forEach(function(k){var e=document.getElementById(k);if(e)e.onchange=function(){D.prefs=D.prefs||{};D.prefs[k]=e.checked;render()}});
+  Array.prototype.forEach.call(q('[data-pre]'),function(b){b.onclick=function(){var v=b.dataset.pre.split("_").map(Number);b.disabled=true;b.textContent="Ajoutée à la file";post({a:"precal",head:v[0],ace:v[1],slot:v[2]})}});
+  on("unforce",function(){S.forced={};S.flow=null;render()});
+  on("go",function(){send("print")});on("up",function(){send("upload")});
+  on("pf",function(){S.busy=true;S.msg=null;render();post({a:"preflight"})});
+  on("rl",function(){S.busy=true;S.msg=null;render();post({a:"reload"})});
+  on("x",function(){post({a:"close"})});
+}
+window.__orca_on_message=function(m){if(m.type==="data"){var keep=D.report&&m.data.report&&D.name===m.data.name;D=m.data;if(!keep){S.sel=null;S.forced={}}S.flow=null;S.busy=false;S.msg=null}
+  else if(m.type==="done"){S.busy=!!m.final;S.msg=m}render()};
 try{window.orca.onMessage(window.__orca_on_message)}catch(e){}
+document.addEventListener("click",function(){if(S.open!==null){S.open=null;render()}});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&S.open!==null){S.open=null;render()}});
 render();
 })();
 </script></body></html>"""
@@ -1145,7 +1693,8 @@ class U1PreflightWindow:
         self.window = None
         self.job = None
         self.live_sig = None
-        self.prefs = {"bed": True, "flow": False, "cam": False}
+        self.prefs = {"bed": True, "zone": True, "flow": False, "cam": False, "soft": True}
+        self.report = None
         self._lock = threading.Lock()
 
     def start(self, path, name, host, delay=1.0):
@@ -1177,9 +1726,16 @@ class U1PreflightWindow:
                 return
             if self.job is not job:
                 return
+            try:
+                info = slice_info(path)
+            except OSError:
+                info = {"sliced": [], "grams": [], "order": [], "thumb": None}
+            load = load_info(client)
             self.live_sig = _signature(live)
+            self.report = report
+            caps = _u1code.get("caps") or {}
             self._send({"name": name, "version": version, "sha": sha, "report": report, "labels": PLAN_LABELS,
-                        "prefs": self.prefs})
+                        "prefs": self.prefs, "info": info, "load": load, "can_force": bool(caps.get("remap"))})
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -1205,7 +1761,7 @@ class U1PreflightWindow:
                 pass
         payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
         self.window = orca.host.ui.create_window(html=U1_PAGE.replace("__DATA__", payload),
-                                                 title="multiACE - Preflight de la U1", width=760, height=680,
+                                                 title="multiACE - Preflight de la U1", width=1100, height=860,
                                                  on_message=self.on_message, on_close=self._closed)
 
     def _closed(self):
@@ -1233,9 +1789,29 @@ class U1PreflightWindow:
             return
         if a == "preflight":
             threading.Thread(target=self._to_preflight, daemon=True).start()
-        elif a == "print" and m.get("plan") in PLAN_LABELS:
-            self.prefs = {k: m.get(k) is True for k in ("bed", "flow", "cam")}
-            threading.Thread(target=self._print, args=(m["plan"], dict(self.prefs)), daemon=True).start()
+        elif a in ("print", "upload") and m.get("plan") in PLAN_LABELS:
+            self.prefs = {k: m.get(k) is True for k in ("bed", "zone", "flow", "cam", "soft")}
+            prefs = dict(self.prefs)
+            fh = m.get("flow_heads")
+            if isinstance(fh, list):
+                prefs["flow_heads"] = [h for h in fh if isinstance(h, int) and not isinstance(h, bool) and 0 <= h <= 3]
+            forced = m.get("forced") if isinstance(m.get("forced"), dict) else {}
+            threading.Thread(target=self._print, args=(m["plan"], prefs, forced, a == "upload"),
+                             daemon=True).start()
+        elif a == "precal":
+            try:
+                h, ace, sl = int(m.get("head")), int(m.get("ace")), int(m.get("slot"))
+            except (TypeError, ValueError):
+                return
+            if 0 <= h <= 3 and 0 <= ace <= 7 and 0 <= sl <= 3:
+                # Meme file d'attente que le bouton du panneau : bobine sur sa tete, puis mesure memorisee.
+                _PANEL._run("ACE_LOAD_HEAD", {"HEAD": h, "ACE": ace, "SLOT": sl})
+                _PANEL._run("ACE_PA_CALIBRATE", {"HEAD": h, "FORCE": 1})
+                self._reply(True, "Calibration de ACE %d · slot %d sur T%d ajoutée à la file du panneau multiACE. "
+                                  "Attends qu'elle soit finie, puis « Recharger » : le PA est mémorisé sur la "
+                                  "bobine." % (ace + 1, sl + 1, h + 1))
+        elif a == "reload":
+            self.start(self.job["path"], self.job["name"], self.job["host"], delay=0)
 
     def _to_preflight(self):
         job = self.job
@@ -1249,18 +1825,27 @@ class U1PreflightWindow:
         except Exception as e:
             self._reply(False, "Échec : %s" % e)
 
-    def _print(self, plan_name, prefs):
+    def _print(self, plan_name, prefs, forced=None, upload_only=False):
         job = self.job
         client = MultiAce(job["host"])
         try:
-            state = client.state(timeout=TIMEOUT_UI)
-            ps = str(state.get("printer_state") or "").lower()
-            if ps in ("printing", "paused") or state.get("swap_in_progress"):
-                raise MultiAceError("la U1 est occupée (%s)" % (ps or "échange en cours"))
-            final = u1_prepare(client, job["path"], job["name"], plan_name, prefs, self.live_sig)
+            if not upload_only:
+                state = client.state(timeout=TIMEOUT_UI)
+                ps = str(state.get("printer_state") or "").lower()
+                if ps in ("printing", "paused") or state.get("swap_in_progress"):
+                    raise MultiAceError("la U1 est occupée (%s)" % (ps or "échange en cours"))
+            final = u1_prepare(client, job["path"], job["name"], plan_name, prefs, self.live_sig,
+                               report=self.report, forced=forced)
             base, ext = os.path.splitext(os.path.basename(job["name"]))
-            client.send_gcode(final, base + "_multiACE" + (ext or ".gcode"), endpoint="/upload-and-print")
-            self._reply(True, "Impression lancée avec le plan « %s »." % PLAN_LABELS[plan_name], final=True)
+            target = base + "_multiACE" + (ext or ".gcode")
+            what = "le plan « %s »%s" % (PLAN_LABELS[plan_name], " et tes bobines imposées" if forced else "")
+            if upload_only:
+                client.send_gcode(final, target, endpoint="moonraker")
+                self._reply(True, "%s envoyé sur la U1 sans lancer (%s) : lance-le depuis l'écran ou Fluidd."
+                            % (target, what))
+                return
+            client.send_gcode(final, target, endpoint="/upload-and-print")
+            self._reply(True, "Impression lancée avec %s." % what, final=True)
         except U1CodeError as e:
             self._reply(False, "Vérification : %s. Utilise « Ouvrir dans le Preflight multiACE »." % e)
         except PermissionError:

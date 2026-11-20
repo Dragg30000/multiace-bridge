@@ -2,7 +2,28 @@
 
 Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (2 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
-Les versions précédentes sont dans les Releases GitHub.
+Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
+
+## 0.35.1 (20/11/2026)
+- **Premier export qui partait dans le Preflight de multiACE** : quand la U1 imprime, elle peut mettre plus de 8 s à servir son code au premier appel. Le plugin attend maintenant jusqu'à 30 s et refait jusqu'à 3 essais si la U1 ne répond pas à temps (pas si elle répond une erreur), au lieu d'abandonner tout de suite.
+- **Liste « Forcer une bobine » refaite comme avant** : bouton avec la pastille de couleur et « Automatique · Marron ACE 1 · slot 2 → T2 · Haut débit » (la bobine choisie par la U1), menu avec une pastille par bobine, la tête, la buse, le poids et l'étiquette rouge « buse ≠ » sur les mauvaises têtes. Échap ou clic à côté ferme le menu.
+- **Déplacement doux vers la ligne d'amorce** de retour (option « Au lancement », cochée par défaut) : après le chargement et les calibrations, les déplacements rapides avant la 1re couche passent à 100 mm/s avec une accélération réduite, et la buse remonte de 5 mm avant. Même traitement que la 0.33.
+- Tests : u1full_test.py (22 vérifications). 18 tests OK.
+
+## 0.35.0 (20/11/2026)
+- **La fenêtre « Preflight de la U1 » reprend l'ancienne fenêtre d'attribution (v0.20)**, en respectant la méthode de decay71 : le calcul reste fait par le code multiACE de la U1, le plugin affiche et applique sans choisir lui-même.
+  - En-tête avec la vignette, compteurs (changements d'outil, échanges de bobine, têtes chargées au départ, couleurs), plans de la U1.
+  - Tableau Slicer → Bobine → Correspondance : « tranché pour T1 · Haut débit », tête et buse réelle de chaque bobine, poids restant.
+  - **Forcer une bobine** : liste des bobines chargées, avec la buse de leur tête. Le choix est passé tel quel au code de la U1 (`remap_override`, le même mécanisme que l'édition manuelle dans le Preflight web de multiACE) ; le plan passe sur « Comme tranché ». Bobine absente ou filament inconnu : envoi refusé. « Revenir au choix de la U1 » annule.
+  - **Alerte buse** Haut débit / Standard pour chaque filament du plan affiché (et de tes choix), sans blocage : « ⚠ Filament 2 : tranché pour une buse Haut débit (T2), imprimé sur T3 (Standard) ».
+  - **Calibration du flux (PA) au départ** : cases par tête chargée au départ (les têtes décochées gardent leur PA mémorisé) ; pour les filaments qui arrivent en cours d'impression, PA mémorisé sur la bobine pour la buse de la tête et bouton **Calibrer avant** (file d'attente du panneau).
+  - **Calibration du plateau sur la zone imprimée** : si le profil palpe tout le plateau (`BED_MESH_CALIBRATE PROBE_COUNT=11,11`), le plugin ajoute `MESH_MIN` / `MESH_MAX` autour des objets et de tout ce qui est extrudé à la 1re couche (tour de purge comprise), marge 5 mm, avec le même écart entre points. Commande Klipper standard, vérifiée dans le firmware de la U1 (Snapmaker/u1-klipper). Si le profil vise déjà une zone, rien ne change.
+  - Boutons : Lancer l'impression, **Envoyer sur la U1 sans lancer**, Ouvrir dans le Preflight multiACE, **Recharger**, Fermer.
+- Tests : u1full_test.py (19 vérifications : infos du fichier, bobines imposées, refus, maillage zone, flux par tête, envoi sans lancer, Calibrer avant). 18 tests OK.
+
+## 0.34.5 (20/11/2026)
+- Options « Au lancement » de retour avec multiACE 1.27b (maillage du plateau, calibration du flux, time-lapse) dans la fenêtre « Preflight de la U1 ». En 1.27b, multiACE ne les met pas dans le code partagé (elles sont dans son serveur) : le plugin reprend à l'identique la fonction de multiACE 1.27b (_prepend_print_prefs, decay71, GPL-3.0), et seulement dans ce cas. Avec une version de multiACE qui fournit prepend_print_prefs, c'est la sienne qui est utilisée.
+- Tests : u1code_test vérifie que le résultat est identique, octet pour octet, à la fonction de multiACE 1.27b (3 combinaisons d'options). 17 tests OK.
 
 ## 0.34.4 (20/11/2026)
 - Préparation avec le code de la U1 : prise en charge de **multiACE 1.27b**. Premier essai sur la vraie U1 : la vérification avait refusé le Preflight de la 1.27b (« parse_meta a changé (with_header) ») et, comme prévu, envoyé le fichier d'origine au Preflight de multiACE. Le plugin s'adapte maintenant à la version de la U1 : il n'exige que les fonctions présentes depuis la 1.27b et n'utilise les nouveautés (en-tête, estimation des échanges, options de lancement) que si le code de la U1 les fournit. Toujours lu sans être exécuté avant de décider.

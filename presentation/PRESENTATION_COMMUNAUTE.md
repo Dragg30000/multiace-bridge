@@ -68,7 +68,7 @@ Je vous présente **multiACE Bridge**, un plugin pour **OrcaSlicer 2.5** qui fai
 
 
 📤 **Export avec le Preflight de ta U1**
-À l'export, le plugin exécute dans Orca le Preflight fourni par ta U1 (le code multiACE de ta version), après vérifications, puis imprime. Si quelque chose ne colle pas, rien n'est exécuté et le G-code original part dans le Preflight de multiACE. Le plugin n'a aucune logique d'attribution à lui.
+À l'export, le plugin exécute dans Orca le Preflight fourni par ta U1 (le code multiACE de ta version), après vérifications, puis imprime. La fenêtre montre les plans de la U1, **alerte si une couleur part sur une buse Haut débit / Standard différente**, permet d'**imposer une bobine** (appliquée telle quelle par la U1), et propose au lancement le **maillage sur la zone imprimée**, le **PA tête par tête** et un **départ en douceur**. Si quelque chose ne colle pas, rien n'est exécuté et le G-code original part dans le Preflight de multiACE. Le plugin n'a aucune logique d'attribution à lui.
 
 🧭 **Assistant « Avant de trancher »**
 Sur la U1, le slot d'une bobine décide de sa tête (slot 3 → T3), alors qu'Orca suppose que le filament N part sur TN. Le plugin lit les **buses vissées directement dans la U1**, retrouve vos bobines par couleur et vous dit quelles buses régler dans Orca pour que le tranchage colle à la réalité.
@@ -162,7 +162,7 @@ Meet **multiACE Bridge**, a plugin for **OrcaSlicer 2.5** that connects Orca to 
 
 
 📤 **Export with your U1's Preflight**
-On export, the plugin runs the Preflight served by your U1 (your multiACE version's code) inside Orca, after checks, then prints. If anything doesn't match, nothing is run and the original G-code goes to multiACE's Preflight. The plugin has no assignment logic of its own.
+On export, the plugin runs the Preflight served by your U1 (your multiACE version's code) inside Orca, after checks, then prints. The window shows the U1's plans, **warns when a colour lands on a different High flow / Standard nozzle**, lets you **force a spool** (applied as is by the U1), and offers at print start a **bed mesh on the printed area**, **PA head by head** and a **soft start**. If anything doesn't match, nothing is run and the original G-code goes to multiACE's Preflight. The plugin has no assignment logic of its own.
 
 🧭 **"Before slicing" assistant**
 On the U1, a spool's slot decides its head (slot 3 → T3), while Orca assumes filament N prints on TN. The plugin reads the **installed nozzles straight from the U1**, finds your spools by colour and tells you which nozzle settings to use in Orca so the slicing matches reality.
