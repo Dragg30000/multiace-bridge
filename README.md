@@ -13,8 +13,7 @@
 - Action queue (load, swap, unload, dry), spool editor without RFID, PA calibration per spool
 - Compact mode, foldable modules, U1 camera and touchscreen in the panel
 - "Before slicing" assistant: reads the nozzles fitted on the U1 (Standard / High Flow)
-- Colour-to-spool assignment on export (multiACE 1.27b engine by decay71, included unchanged), nozzle check, placement plan
-- Start options: bed mesh, flow calibration, time-lapse, soft move to the purge line
+- Export runs **your U1's own multiACE Preflight** inside Orca (the code your multiACE version serves), with checks first; if anything doesn't match, nothing is run and the original G-code goes to multiACE's Preflight instead. The plugin has no assignment logic of its own and never changes your export
 - ACE guard: restarts drying and filament feed after an ACE disconnect
 
 Full presentation: [EN slides](presentation/multiACE_Bridge_slides_EN.pdf) · [diaporama FR](presentation/multiACE_Bridge_diaporama_FR.pdf) · guides in [docs/](docs/).
@@ -24,9 +23,9 @@ The interface is in French for now.
 
 **Orca Cloud:** File → Plugins → Browse plugins → *multiACE Bridge* → Subscribe → Activate.
 
-**Manual:** download `multiace_bridge-<version>-py3-none-any.whl`, then Orca → File → Plugins → *Install local plugin* → restart Orca → allow network access to your U1.
+**Manual:** download `multiace_bridge_any.py`, then Orca → File → Plugins → *Install local plugin* → restart Orca → allow network access to your U1.
 
-Requirements: OrcaSlicer 2.5, Snapmaker U1, multiACE (tested on 1.27b, paxx firmware). Tested with 2 ACE Pro on a USB hub.
+Requirements: OrcaSlicer 2.5, Snapmaker U1, multiACE with Preflight inbox (0.99.8b or newer; tested on 1.27b, paxx firmware). Tested with 2 ACE Pro on a USB hub.
 
 ## Bugs & feedback
 
@@ -34,7 +33,7 @@ Open an [issue](../../issues/new/choose) with your plugin, Orca and multiACE ver
 
 ## Privacy
 
-The plugin only talks to the U1 address you enter, on your local network. It does not download or run any code from the network.
+The plugin only talks to the U1 address you enter, on your local network. The only code it runs is the Preflight served by your own U1, checked before running; it never changes your export.
 
 ## ⚠️ Disclaimer / Avertissement
 
@@ -43,7 +42,7 @@ Bêta fournie **telle quelle, sans garantie**. **À vos risques et périls.**
 
 ## Credits
 
-- **decay71** and the multiACE contributors: [decay71/multiACE](https://github.com/decay71/multiACE) (GPL-3.0). `multiace_engine_127.py` is their post-processor, unchanged.
+- **decay71** and the multiACE contributors: [decay71/multiACE](https://github.com/decay71/multiACE) (GPL-3.0). The export runs the Preflight code served by multiACE, as its author asked (issue #243), and falls back to “Send to multiACE”.
 - The **OrcaSlicer** team for the plugin system, and **paxx** for the firmware.
 
 License: GPL-3.0. — Dragg with his friend Claude

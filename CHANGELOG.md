@@ -1,8 +1,33 @@
 # multiACE Bridge : journal des mises à jour
 
 Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (2 ACE).
-Fichier à installer : `multiace_bridge-0.33.0-py3-none-any.whl` depuis la 0.33.0 (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
+Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Les versions précédentes sont dans les Releases GitHub.
+
+## 0.34.3 (20/11/2026)
+- Options déplacées en haut : bouton **⚙** dans la barre du panneau (à côté de ↻). Il ouvre une carte « Options » (adresse de la U1 avec Modifier, homing automatique, garde-fou, préparation de l'export avec le code de la U1), visible même quand les modules sont repliés ou en mode réduit ; ✕ la ferme. Les options ne sont plus cachées dans le module Têtes.
+- Tests : host_test et ui_queue_test ouvrent les options par le bouton ⚙. 17 tests OK.
+
+## 0.34.2 (20/11/2026)
+- Adresse de la U1 : si le plugin ne la trouve pas (ni dans ses réglages, ni dans l'« hôte d'impression » du profil U1), ou si la U1 ne répond pas à cette adresse, une **boîte « Adresse de la U1 »** apparaît en haut du panneau ACE (aussi en mode réduit) pour la saisir ou la corriger. L'adresse est vérifiée (multiACE doit répondre) avant d'être enregistrée ; Orca peut alors demander l'autorisation réseau.
+- Options du panneau : ligne « Adresse de la U1 : … » avec un bouton **Modifier**.
+- Messages d'erreur : renvoient vers le panneau ACE (Options → Adresse de la U1) au lieu de l'onglet multiACE.
+- Tests : host_test.py (adresse invalide, U1 muette, bonne adresse enregistrée, boîte affichée / fermée / pré-remplie, bouton Modifier). 17 tests OK.
+
+## 0.34.1 (20/11/2026)
+- Le plugin démarre **au lancement d'OrcaSlicer**, sans devoir ouvrir l'onglet multiACE : le panneau ACE s'ouvre et le garde-fou se lance dès le chargement (capacité « panneau ACE », `on_load`), puis à chaque événement d'Orca (projet ouvert, préréglage choisi…) si ce n'était pas encore possible. Avant, seul l'onglet multiACE recevait ces événements, et il n'était créé qu'à son ouverture.
+- Adresse de la U1 : celle enregistrée dans le plugin, sinon l'« hôte d'impression » du profil imprimante U1, maintenant lue et mémorisée dès le chargement.
+- Tests : harness vérifie que le panneau s'ouvre au chargement.
+
+## 0.34.0 (20/11/2026)
+- Aligné sur la demande de decay71 (multiACE, issue #243) : **le plugin n'a plus aucune logique d'attribution**. À l'export, il exécute dans Orca **le Preflight fourni par ta U1** (code multiACE de ta version : `/api/preflight/pysrc`, avec le chargement de `/api/preflight/livedata`), exactement ce que lance l'interface web multiACE. Il suit donc toute seule les mises à jour de multiACE.
+- **Vérifications avant d'exécuter** : code présent, taille limitée, fonctions et paramètres attendus lus **sans exécuter** le code ; sinon (multiACE trop ancien ou version non reconnue, tête en manuel), rien n'est exécuté et le G-code **original** part dans le Preflight de multiACE (`/api/preflight/inbox`), avec la raison affichée.
+- **Vérifications avant d'envoyer** : U1 libre, bobines identiques à celles de l'analyse (sinon nouvelle analyse), fichier préparé marqué par multiACE, uniquement des bobines présentes ; l'export d'origine n'est jamais modifié.
+- Nouvelle fenêtre « multiACE - Preflight de la U1 » : plans proposés par multiACE (slicer / optimize / layer, avec échanges de bobine), bobine de chaque filament, préférences de lancement de multiACE (maillage, flux, time-lapse), boutons Imprimer et « Ouvrir dans le Preflight multiACE ».
+- Option du panneau : « Préparer l'export avec le code multiACE de la U1 » (cochée). Décochée : le fichier d'origine part toujours dans le Preflight de multiACE, rien n'est exécuté.
+- Retirés : l'ancienne fenêtre d'attribution, le moteur 1.27b embarqué (`multiace_engine_127.py`), le plan de placement maison, le choix de bobine forcé, le blocage sur les buses et le déplacement doux (le début du G-code est maintenant préparé par multiACE).
+- De nouveau **un seul fichier** : `multiace_bridge_any.py` (désinstaller le .whl de la 0.33.0). Réglages conservés.
+- Tests : u1code_test.py (vraies sources multiACE servies par une fausse U1 : plans, fichier préparé, refus si bobines changées, code absent ou modifié, tête manuelle, fichier déjà traité, repli vers le Preflight) ; security_test vérifie qu'aucun code n'est caché et que la vérification passe avant l'exécution. 16 tests OK.
 
 ## 0.33.0 (20/11/2026)
 - Version prête pour Orca Cloud : le plugin est maintenant livré en **paquet .whl** (`multiace_bridge-0.33.0-py3-none-any.whl`), à installer à la place de `multiace_bridge_any.py` (désinstaller l'ancien, *Install local plugin*, choisir le .whl, redémarrer Orca). Réglages conservés.

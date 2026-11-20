@@ -1,7 +1,7 @@
 # multiACE Bridge : présentation pour la communauté
 
 Textes prêts à coller (forum Snapmaker, GitHub de multiACE, Reddit, Discord).
-Remplace [lien] par l'adresse de téléchargement. Les images sont dans le dossier `images/`. Sur un forum, glisse chaque image à l'endroit où elle est citée.
+Les images sont dans le dossier `images/`. Sur un forum, glisse chaque image à l'endroit où elle est citée.
 
 | N° | Image | Fonction |
 |---|---|---|
@@ -16,10 +16,6 @@ Remplace [lien] par l'adresse de téléchargement. Les images sont dans le dossi
 | 09 | `09_avant_de_trancher.png` | Assistant « Avant de trancher » |
 | 10 | `10_garde_fou.png` / `10b_garde_fou_question.png` | Garde-fou ACE |
 | 11 | `11_ace_sechage.png` | ACE : humidité, température, séchage |
-| 12 | `12_attribution.png` / `12_attribution_complete.png` | Attribution des couleurs |
-| 13 | `13_au_lancement.png` | Options au lancement |
-| 14 | `14_choix_bobine_buse.png` | Choix de bobine et buse |
-| 15 | `15_plan_placement.png` | Plan de placement |
 
 ---
 
@@ -67,24 +63,8 @@ Je vous présente **multiACE Bridge**, un plugin pour **OrcaSlicer 2.5** qui fai
 ![Caméra de la U1 (image d'exemple)](images/08_camera.png)
 
 
-🎨 **Attribution des couleurs à l'export**
-- Chaque couleur du G-code est associée à une bobine des ACE (moteur multiACE de l'imprimante, ou moteur intégré).
-
-![Attribution des couleurs](images/12_attribution.png)
-
-- Vérification du **type de buse** (Standard / Haut débit) : alerte, puis blocage si un filament important part sur la mauvaise buse.
-
-![Choix de bobine et type de buse](images/14_choix_bobine_buse.png)
-
-- Plan de placement des bobines quand ça évite des échanges.
-
-![Plan de placement](images/15_plan_placement.png)
-
-- Options au lancement : maillage du plateau, calibration du flux, time-lapse, **chargement automatique** des têtes, déplacement doux vers la ligne d'amorce.
-
-![Options au lancement](images/13_au_lancement.png)
-
-- Envoi et lancement de l'impression directement sur la U1.
+📤 **Export avec le Preflight de ta U1**
+À l'export, le plugin exécute dans Orca le Preflight fourni par ta U1 (le code multiACE de ta version), après vérifications, puis imprime. Si quelque chose ne colle pas, rien n'est exécuté et le G-code original part dans le Preflight de multiACE. Le plugin n'a aucune logique d'attribution à lui.
 
 🧭 **Assistant « Avant de trancher »**
 Sur la U1, le slot d'une bobine décide de sa tête (slot 3 → T3), alors qu'Orca suppose que le filament N part sur TN. Le plugin lit les **buses vissées directement dans la U1**, retrouve vos bobines par couleur et vous dit quelles buses régler dans Orca pour que le tranchage colle à la réalité.
@@ -109,7 +89,7 @@ Si un ACE perd sa liaison USB (hub, longues impressions…), le plugin relance l
 Orca → Fichier → Plugins → *Installer un plugin local* → `multiace_bridge_any.py` → redémarrer Orca, puis accepter l'accès réseau vers votre U1.
 
 **Sécurité et vie privée**
-Le plugin ne parle **qu'à votre U1, sur votre réseau local** : rien n'est envoyé ailleurs. Toutes les valeurs placées dans des commandes G-code sont nettoyées. Le moteur de l'imprimante n'est utilisé que si vous le souhaitez (une case permet de ne jamais télécharger de code). Licence **GPL-3.0**.
+Le plugin ne parle **qu'à votre U1, sur votre réseau local** : rien n'est envoyé ailleurs. Le seul code exécuté est le Preflight fourni par votre U1, vérifié avant. Licence **GPL-3.0**.
 
 **État du projet**
 C'est une **bêta**. Elle s'utilise au quotidien chez moi, et une vingtaine de tests automatiques vérifient chaque version. Mais chaque installation est différente : vos retours sont précieux, surtout avec 3 ou 4 ACE, un ACE 2, ou d'autres combinaisons de buses. Un journal des mises à jour et toutes les versions précédentes sont fournis.
@@ -120,8 +100,10 @@ multiACE Bridge est une bêta fournie **telle quelle, sans aucune garantie** (li
 **Merci**
 À **decay71** et à tous les contributeurs de **multiACE** (sans eux, rien de tout ça n'existerait), à l'équipe **OrcaSlicer** pour le système de plugins, et à **paxx** pour son firmware.
 
-📥 Téléchargement et guide (PDF FR / EN) : [lien]
-📽 Présentation en diapositives : [lien diaporama FR]
+📥 Orca Cloud : Fichier → Plugins → Browse plugins → *multiACE Bridge*
+💻 Code, guides et téléchargement : https://github.com/Dragg30000/multiace-bridge
+🐞 Signaler un bug : https://github.com/Dragg30000/multiace-bridge/issues
+📽 Présentation en diapositives : https://github.com/Dragg30000/multiace-bridge/blob/main/presentation/multiACE_Bridge_diaporama_FR.pdf
 
 Dragg avec son ami Claude
 
@@ -171,24 +153,8 @@ Meet **multiACE Bridge**, a plugin for **OrcaSlicer 2.5** that connects Orca to 
 ![U1 camera (example image)](images/08_camera.png)
 
 
-🎨 **Colour assignment at export**
-- Every colour in the G-code is matched to a spool in your ACE units (the printer's multiACE engine, or the built-in one).
-
-![Colour assignment](images/12_attribution.png)
-
-- **Nozzle type check** (Standard / High Flow): a warning, then a block if a significant filament would print on the wrong nozzle.
-
-![Spool and nozzle choice](images/14_choix_bobine_buse.png)
-
-- A spool layout plan when moving spools saves swaps.
-
-![Placement plan](images/15_plan_placement.png)
-
-- Start options: bed mesh, flow calibration, time-lapse, **automatic loading** of the heads, gentle move to the purge line.
-
-![Start options](images/13_au_lancement.png)
-
-- Upload and start the print directly on the U1.
+📤 **Export with your U1's Preflight**
+On export, the plugin runs the Preflight served by your U1 (your multiACE version's code) inside Orca, after checks, then prints. If anything doesn't match, nothing is run and the original G-code goes to multiACE's Preflight. The plugin has no assignment logic of its own.
 
 🧭 **"Before slicing" assistant**
 On the U1, a spool's slot decides its head (slot 3 → T3), while Orca assumes filament N prints on TN. The plugin reads the **installed nozzles straight from the U1**, finds your spools by colour and tells you which nozzle settings to use in Orca so the slicing matches reality.
@@ -213,7 +179,7 @@ If an ACE drops its USB link (hub, long prints…), the plugin restarts **drying
 Orca → File → Plugins → *Install local plugin* → `multiace_bridge_any.py` → restart Orca, then allow network access to your U1.
 
 **Security & privacy**
-The plugin **only talks to your U1, on your local network**: nothing is sent anywhere else. Every value placed in a G-code command is sanitised. The printer's engine is only used if you want it (a checkbox ensures no code is ever downloaded). Licensed under **GPL-3.0**.
+The plugin **only talks to your U1, on your local network**: nothing is sent anywhere else. The only code it runs is the Preflight served by your U1, checked first. Licensed under **GPL-3.0**.
 
 **Project status**
 This is a **beta**. I use it daily, and about twenty automated tests check every release. But every setup is different, so feedback is very welcome, especially with 3 or 4 ACE units, an ACE 2, or other nozzle combinations. A changelog and every previous version are included.
@@ -224,7 +190,9 @@ multiACE Bridge is a beta provided **as is, without any warranty** (GPL-3.0 lice
 **Thanks**
 To **decay71** and all **multiACE** contributors (none of this would exist without them), to the **OrcaSlicer** team for the plugin system, and to **paxx** for the firmware.
 
-📥 Download & guide (PDF EN / FR): [link]
-📽 Slide presentation: [EN slides link]
+📥 Orca Cloud: File → Plugins → Browse plugins → *multiACE Bridge*
+💻 Code, guides & download: https://github.com/Dragg30000/multiace-bridge
+🐞 Report a bug: https://github.com/Dragg30000/multiace-bridge/issues
+📽 Slide presentation: https://github.com/Dragg30000/multiace-bridge/blob/main/presentation/multiACE_Bridge_slides_EN.pdf
 
 Dragg with his friend Claude
