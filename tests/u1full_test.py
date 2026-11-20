@@ -57,3 +57,50 @@ mb.MultiAce.get_json = slow; mb._u1code.update(sha=None)
 try: mb.u1_code(c); ok(calls2["n"] == 1, "U1 lente au 1er export : nouvel essai, pas de repli")
 except mb.U1CodeError as e: ok(False, "repli %s" % e)
 mb.MultiAce.get_json = real_get
+# --- 0.35.2 : 1er export de la session, Orca demande l'autorisation « open » et refuse le fil d'arriere-plan
+real_load = mb._load_source; cnt = {"n": 0}
+def denied(name, path):
+    if cnt["n"] < 2:
+        cnt["n"] += 1; raise PermissionError("operation not permitted by audit hook")
+    return real_load(name, path)
+mb._load_source = denied; mb._u1code.update(sha=None); mb.U1ACCESS_WAIT = 60
+W = mb._U1PF; sent = []; W._send = lambda d: sent.append(d); UP.clear()
+W.start(g, "real.gcode", host, delay=0); time.sleep(16)
+ok(any("autorisation" in (d.get("loading") or "") for d in sent), "autorisation en attente -> message « réponds Oui »")
+ok(sent and sent[-1].get("report") and not UP, "après la réponse : fenêtre normale, rien envoyé au Preflight de multiACE")
+mb._load_source = real_load
+e = PermissionError(13, "denied", "/x"); ok(mb._denied(RuntimeError("x")) is False and mb._denied(e), "détection d'un refus d'accès")
+# --- 0.35.3 : plan Optimise de multiACE 1.27b = disposition proposee
+rp = {"plans": {"slicer": {"mapping": [{"t": 0, "slot": {"ace": 1, "slot": 3}}, {"t": 1, "slot": {"ace": 0, "slot": 3}}]},
+                "optimize": {"mapping": [{"t": 0, "tier": "planned", "slot": {"ace": 0, "slot": 0}}, {"t": 1, "tier": "planned", "slot": {"ace": 0, "slot": 3}}]},
+                "layer": {"mapping": [{"t": 0, "tier": "exact_hex", "slot": {"ace": 0, "slot": 0}}]}}}
+ok(mb.placement_todo(rp, "optimize") == [0], "disposition proposée : filament 1 pas encore à sa place")
+ok(mb.placement_todo(rp, "slicer") == [] and mb.placement_todo(rp, "layer") == [], "plans calculés sur les bobines chargées : rien à placer")
+W = mb._U1PF; sent = []; W._reply = lambda ok_, text, final=False: sent.append({"done": ok_, "text": text}); W.report = rp; UP.clear()
+W._print("optimize", {}); ok(not UP and "place d'abord" in sent[-1]["text"], "lancement refusé tant que les bobines ne sont pas en place : %s" % sent[-1]["text"])
+# --- 0.35.4 : chargement automatique verifie, etape Preflight ajoutee au profil
+rep, live, sha = mb.u1_report(c, g, "real.gcode")
+f = mb.u1_prepare(c, g, "real.gcode", "slicer", {}, mb._signature(live))
+ok(mb.autoload_heads(f) == [0, 1, 2, 3], "chargement automatique au départ lu dans le fichier préparé : %s" % mb.autoload_heads(f))
+ok(mb.autoload_heads(g) is None, "fichier sans bloc de chargement : signalé")
+import types as _t
+CFG = {"slicing_pipeline_plugin": '"Autre plugin"'}; TX = []
+class Pr:
+    def config_value(self, k): return CFG.get(k)
+    def label(self, *a): return "PLA - U1 - TEST"
+class Prn:
+    def config_value(self, k): return "Snapmaker U1" if k == "printer_model" else None
+class Tx:
+    def set(self, k, v): TX.append((k, v))
+    def commit(self):
+        CFG["slicing_pipeline_plugin"] = TX[-1][1]; return _t.SimpleNamespace(target_name="PLA - U1 - TEST")
+mb.orca.host.preset_bundle = lambda: _t.SimpleNamespace(current_printer_preset=lambda: Prn(), prints=_t.SimpleNamespace(edited_preset=lambda: Pr()))
+mb.orca.host.preset = _t.SimpleNamespace(process=_t.SimpleNamespace(begin_update=lambda *a: Tx()))
+st = mb.pipeline_status(force=True)
+ok(st["state"] == "added" and TX[-1][1] == '"Autre plugin";"multiACE : envoyer au Preflight"', "étape ajoutée au profil U1, autres plugins gardés : %s" % TX[-1][1])
+st = mb.pipeline_status(force=True); ok(st["state"] == "present" and len(TX) == 1, "déjà présente : rien n'est touché")
+mb.note_pipeline_ran(); st = mb.pipeline_status(force=True); ok(st.get("ran_here") is True and st.get("ran_version") == mb.VERSION, "dernier export préparé par cette copie (v%s)" % st.get("ran_version"))
+open(mb._ran_path(), "w").write(json.dumps({"version": "0.34.3", "storage": "/autre/copie"})); st = mb.pipeline_status(force=True)
+ok(st.get("ran_here") is False and st.get("ran_version") == "0.34.3", "autre copie du plugin détectée")
+Prn.config_value = lambda self, k: "Bambu Lab P1S"; CFG["slicing_pipeline_plugin"] = ""; TX.clear()
+st = mb.pipeline_status(force=True); ok(st["state"] == "not_u1" and not TX, "profil d'une autre imprimante : jamais modifié")

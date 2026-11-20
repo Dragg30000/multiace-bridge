@@ -4,6 +4,26 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (2 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.35.4 (21/11/2026)
+- **Étape « multiACE : envoyer au Preflight » ajoutée toute seule au profil de traitement** quand l'imprimante est une U1 (au démarrage, à l'ouverture d'un projet, puis contrôlée par le panneau toutes les 10 s). L'ancienne version attendait un événement « profil choisi » qu'OrcaSlicer 2.5 n'envoie jamais : elle ne s'ajoutait donc jamais. Les autres plugins du profil sont gardés ; les profils d'une autre imprimante (P1S…) ne sont jamais touchés. OrcaSlicer ne permet pas à un plugin d'enregistrer un profil : il passe en « modifié », enregistre-le (disquette) pour garder l'étape. Option ⚙ « Ajouter l'étape Preflight aux profils de la U1 ».
+- **Bonne copie du plugin** : ⚙ Options affiche « ✓ Étape Preflight présente dans « profil » » et « Dernier export préparé par cette copie (vX) », ou ⚠ si le dernier export est passé par une autre copie (copie locale + copie Orca Cloud).
+- **Bobines du panneau** : un 2e clic sur une bobine la replie (plus besoin de « Annuler »).
+- **Chargement automatique au départ** vérifié dans le fichier préparé : le message après l'envoi dit quelles têtes seront chargées avant la 1re couche, ou prévient s'il n'y a pas de chargement automatique. Rappel dans « Au lancement ».
+- Tests : u1full_test.py (35 vérifications), ui_queue_test (repli au 2e clic), harness. 18 tests OK.
+
+## 0.35.3 (20/11/2026)
+- **Plans « Optimisé » et « Par couche » : schéma « Disposition finale » de retour.** Avec multiACE 1.27b, ces plans ne partent pas des bobines chargées : ils proposent une nouvelle disposition (correspondance « disposition proposée »). La fenêtre l'affichait comme si les bobines y étaient déjà. Maintenant :
+  - carte « Plan : N échanges au lieu de M en déplaçant X bobine(s) », avec les étapes **dans l'ordre** (« Retire Marron de ACE 1 · slot 2, puis Jaune : ACE 2 · slot 2 → ACE 1 · slot 2 ») ;
+  - grille **Disposition finale** ACE × slot (T1 à T4) : en place, à mettre, libérée, pas utilisée, absente ;
+  - « à mettre ici » / « en place » sur chaque ligne du tableau ;
+  - **Lancer / Envoyer bloqués** tant que les bobines ne sont pas en place (vérifié aussi côté plugin avant tout envoi) ; bouton « J'ai placé les bobines : recharger ».
+  - La bobine de chaque couleur est celle que la U1 associe à cette couleur (plan « Comme tranché ») : aucune logique d'attribution ajoutée.
+- Tests : u1full_test.py (28 vérifications). 18 tests OK.
+
+## 0.35.2 (20/11/2026)
+- **Premier export de chaque session qui partait dans le Preflight de multiACE** : la vraie cause. Au premier chargement du code de la U1, OrcaSlicer demande l'autorisation « open » (le plugin ouvre des fichiers Python) et, tant que la question est affichée, refuse l'accès au fil d'arrière-plan : le chargement échouait et le plugin croyait le code de la U1 inutilisable. Maintenant il attend ta réponse (jusqu'à 3 min) avec le message « réponds Oui, la préparation continue toute seule », puis continue normalement. Les modules Python utilisés par le plugin sont chargés au démarrage d'Orca.
+- Tests : u1full_test.py (25 vérifications, dont l'autorisation en attente). 18 tests OK.
+
 ## 0.35.1 (20/11/2026)
 - **Premier export qui partait dans le Preflight de multiACE** : quand la U1 imprime, elle peut mettre plus de 8 s à servir son code au premier appel. Le plugin attend maintenant jusqu'à 30 s et refait jusqu'à 3 essais si la U1 ne répond pas à temps (pas si elle répond une erreur), au lieu d'abandonner tout de suite.
 - **Liste « Forcer une bobine » refaite comme avant** : bouton avec la pastille de couleur et « Automatique · Marron ACE 1 · slot 2 → T2 · Haut débit » (la bobine choisie par la U1), menu avec une pastille par bobine, la tête, la buse, le poids et l'étiquette rouge « buse ≠ » sur les mauvaises têtes. Échap ou clic à côté ferme le menu.
