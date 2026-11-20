@@ -5,16 +5,33 @@
 > **multiACE is decay71's project.** His code does all the real work; this plugin only brings it into OrcaSlicer. All credit goes to decay71 and the multiACE contributors.
 > **multiACE est le projet de decay71.** C'est son code qui fait tout le travail ; ce plugin n'en est qu'une interface dans OrcaSlicer.
 
-![multiACE panel](presentation/images/01_panneau_haut.png)
+<p align="center"><img src="presentation/banner.png" alt="multiACE Bridge" width="820"></p>
 
 ## Features / Fonctions
 
-- Live multiACE panel inside Orca: heads, ACEs, real spool colours, humidity, temperature, drying
-- Action queue (load, swap, unload, dry), spool editor without RFID, PA calibration per spool
-- Compact mode, foldable modules, U1 camera and touchscreen in the panel
-- "Before slicing" assistant: reads the nozzles fitted on the U1 (Standard / High Flow)
-- Export runs **your U1's own multiACE Preflight** inside Orca (the code your multiACE version serves), with checks first; if anything doesn't match, nothing is run and the original G-code goes to multiACE's Preflight instead. The plugin has no assignment logic of its own and never changes your export
-- ACE guard: restarts drying and filament feed after an ACE disconnect
+<table>
+<tr>
+<td width="33%" valign="top"><img src="presentation/readme/01_panneau_haut.png" width="240"><br><b>Live panel</b><br>Heads, ACEs, real spool colours, remaining weight, actions in a queue.</td>
+<td width="33%" valign="top"><img src="presentation/readme/11_ace_sechage.png" width="240"><br><b>Humidity, temperature, drying</b><br>Per ACE, with progress and time left.</td>
+<td width="33%" valign="top"><img src="presentation/readme/05_mode_reduit.png" width="240"><br><b>Compact mode</b><br>All spool colours in a few rows, actions on click.</td>
+</tr>
+<tr>
+<td valign="top"><img src="presentation/readme/09_avant_de_trancher.png" width="240"><br><b>Before slicing</b><br>Reads the nozzles fitted on the U1 (Standard / High Flow) and tells you what to set in Orca.</td>
+<td valign="top"><img src="presentation/readme/10_garde_fou.png" width="240"><br><b>ACE guard</b><br>Restarts drying and filament feed after an ACE USB dropout.</td>
+<td valign="top"><img src="presentation/readme/08_camera.png" width="240"><br><b>U1 camera and screen</b><br>In the panel, at the top, bottom or hidden.</td>
+</tr>
+<tr>
+<td valign="top"><img src="presentation/readme/03_editeur.png" width="240"><br><b>Spool editor</b><br>Works without RFID, linked to the multiACE spool table; PA calibration per spool.</td>
+<td valign="top"><img src="presentation/readme/16_options.png" width="240"><br><b>⚙ Options and U1 address</b><br>Starts with Orca; a box opens if the U1 can't be found.</td>
+<td valign="top"><img src="presentation/readme/17_adresse.png" width="240"><br><b>Address box</b><br>Enter or fix the U1 IP; checked before it is saved.</td>
+</tr>
+</table>
+
+### Export with your U1's own Preflight
+
+<p align="center"><img src="presentation/images/18_preflight_u1.png" width="620"></p>
+
+On export, the plugin runs **the Preflight code served by your U1** (your multiACE version) inside Orca, after checks. If anything doesn't match, nothing is run and the original G-code goes to multiACE's Preflight instead. The plugin has no assignment logic of its own and never changes your export.
 
 Full presentation: [EN slides](presentation/multiACE_Bridge_slides_EN.pdf) · [diaporama FR](presentation/multiACE_Bridge_diaporama_FR.pdf) · guides in [docs/](docs/).
 The interface is in French for now.
