@@ -21,7 +21,7 @@ The interface is in French for now.
 
 ## Install / Installation
 
-**Orca Cloud:** File → Plugins → Browse plugins → *multiACE Bridge* → Subscribe → Activate.
+**Orca Cloud:** [plugin page](https://cloud.orcaslicer.com/app/plugins/shared-plugins/3e04fba9-887d-4edf-b77a-e38a4bd4fc3d), or in OrcaSlicer: File → Plugins → Browse plugins → *multiACE Bridge* → Subscribe → Activate.
 
 **Manual:** download `multiace_bridge_any.py`, then Orca → File → Plugins → *Install local plugin* → restart Orca → allow network access to your U1.
 
