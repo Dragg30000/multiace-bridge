@@ -1,0 +1,26 @@
+name: Bug report / Bug
+description: Something doesn't work / Quelque chose ne marche pas
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Don't post your IP address or personal data. / Ne mettez ni adresse IP ni donnée personnelle."
+  - type: input
+    id: plugin
+    attributes: {label: "multiACE Bridge version", placeholder: "0.33.0"}
+    validations: {required: true}
+  - type: input
+    id: orca
+    attributes: {label: "OrcaSlicer version", placeholder: "2.5.1"}
+    validations: {required: true}
+  - type: input
+    id: multiace
+    attributes: {label: "multiACE version / firmware", placeholder: "1.27b, paxx"}
+    validations: {required: true}
+  - type: input
+    id: setup
+    attributes: {label: "ACEs and nozzles / ACE et buses", placeholder: "2 ACE Pro on a USB hub; T1 T2 T4 High Flow, T3 Standard"}
+  - type: textarea
+    id: what
+    attributes: {label: "What happened? / Que s'est-il passé ?", description: "Steps, what you expected, what you got. Screenshots welcome."}
+    validations: {required: true}
