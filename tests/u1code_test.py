@@ -69,4 +69,12 @@ ok(sent and sent[-1].get("report"), "vérifications OK -> proposition affichée"
 W._reply = lambda ok_, text, final=False: sent.append({"done": ok_, "text": text})
 W._print("slicer", {"bed": True, "flow": False, "cam": False}); 
 ok(UP and UP[-1][0].endswith("/upload-and-print") and sent[-1].get("done"), "Imprimer -> fichier préparé envoyé à la U1: %s" % sent[-1].get("text"))
+# multiACE 1.27b (version de la U1 de Dragg) : API plus ancienne, sans options de lancement dans le code partage
+SRC.update(postprocess=open("/tmp/v127/pp.py").read(), core=open("/tmp/v127/core.py").read()); SRC.pop("swap_cost", None)
+LIVE.pop("cost_params", None); mb._u1code.update(sha=None); MODE["pysrc"] = "ok"
+rep, live, sha = mb.u1_report(c, g, "real.gcode")
+ok(rep["plans"]["slicer"]["feasible"] and rep["_prefs_ok"] is False, "1.27b : rapport calculé, options de lancement signalées indisponibles")
+final = mb.u1_prepare(c, g, "real.gcode", "slicer", {"bed": True}, mb._signature(live))
+t2 = open(final, encoding="utf-8", errors="replace").read()
+ok("SET_PRINT_PREFERENCES BED_LEVEL=1" not in t2 and mb.gcode_facts(final)["processed"], "1.27b : fichier préparé par le code de la U1, aucune option ajoutée par le plugin")
 srv.shutdown(); print("U1CODE OK")

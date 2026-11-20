@@ -5,7 +5,7 @@
 # name = "multiACE Bridge (Snapmaker U1)"
 # description = "Interface pour multiACE de decay71 (Snapmaker U1) dans OrcaSlicer : panneau ACE, interface web multiACE en onglet, et envoi de l'export au Preflight de multiACE."
 # author = "Dragg avec son ami Claude"
-# version = "0.34.3"
+# version = "0.34.4"
 # ///
 """multiACE Bridge - relie OrcaSlicer 2.5 a multiACE (decay71/multiACE) sur une Snapmaker U1.
 
@@ -39,7 +39,7 @@ import uuid
 
 import orca
 
-VERSION = "0.34.3"
+VERSION = "0.34.4"
 TIMEOUT_UI = 4          # secondes, appels faits sur le fil de l'interface
 TIMEOUT_BG = 8          # secondes, appels en arriere-plan
 
@@ -891,14 +891,15 @@ def orca_filament_setup():
 # de multiACE (/api/preflight/inbox), qui fait tout lui-meme.
 
 U1CODE_MAX = 4 * 1024 * 1024      # octets par fichier source
+# Parametres indispensables (presents depuis multiACE 1.27b) ; les autres sont utilises s'ils existent.
 U1CODE_NEEDS = {
-    "parse_meta": ("pp", "line_iter", "with_header"),
+    "parse_meta": ("pp", "line_iter"),
     "build_report": ("slicer_colors", "slicer_types", "num_aces", "plan_proxy", "live_slots", "head_ctx",
-                     "token", "filename", "size", "meta", "header_text", "cost_params"),
+                     "token", "filename", "size", "meta"),
     "rewrite_pipeline": ("src_path", "tmp_a", "tmp_b", "slicer_colors", "slicer_types", "num_aces",
                          "live_slots", "head_ctx", "mode", "meta"),
-    "prepend_print_prefs": (),
 }
+U1CODE_OPTIONAL = ("prepend_print_prefs", "used_ace_slots_file")
 PLAN_LABELS = {"slicer": "Comme tranché (slicer)", "optimize": "Optimisé (optimize)", "layer": "Par couche (layer)"}
 
 
@@ -906,7 +907,7 @@ class U1CodeError(Exception):
     """Verification refusee : on passe par le Preflight de multiACE."""
 
 
-_u1code = {"sha": None, "pp": None, "core": None}
+_u1code = {"sha": None, "pp": None, "core": None, "caps": {}}
 _u1code_lock = threading.Lock()
 
 
@@ -936,6 +937,9 @@ def _check_static(core_src):
         missing = [p for p in params if p not in defs[fn]]
         if missing:
             raise U1CodeError("%s a changé (%s) : version de multiACE non prise en charge" % (fn, ", ".join(missing)))
+    return {"header": "with_header" in defs["parse_meta"],
+            "cost": "cost_params" in defs["build_report"] and "header_text" in defs["build_report"],
+            "prefs": "prepend_print_prefs" in defs, "used": "used_ace_slots_file" in defs}
 
 
 def u1_code(client):
@@ -956,7 +960,7 @@ def u1_code(client):
             raise U1CodeError("code de la U1 trop gros")
     if "def match_colors_to_slots" not in pp_src or "def build_report" not in core_src:
         raise U1CodeError("code de la U1 non reconnu")
-    _check_static(core_src)          # avant d'executer quoi que ce soit
+    caps = _check_static(core_src)   # avant d'executer quoi que ce soit
     sha = hashlib.sha256((pp_src + "\0" + core_src + "\0" + (cost_src or "")).encode("utf-8")).hexdigest()
     with _u1code_lock:
         if _u1code["sha"] == sha:
@@ -984,7 +988,7 @@ def u1_code(client):
         for fn in U1CODE_NEEDS:
             if not callable(getattr(core, fn, None)):
                 raise U1CodeError("fonction %s absente : version de multiACE non prise en charge" % fn)
-        _u1code.update(sha=sha, pp=pp, core=core)
+        _u1code.update(sha=sha, pp=pp, core=core, caps=caps)
         return pp, core, sha[:10]
 
 
@@ -1022,12 +1026,17 @@ def _signature(live):
 def u1_report(client, path, name):
     pp, core, sha = u1_code(client)
     live = _live(client)
-    colors, types, naces, _used, plan, meta, header = core.parse_meta(pp, _read_lines(path), with_header=True)
+    caps = _u1code.get("caps") or {}
+    if caps.get("header"):
+        colors, types, naces, _used, plan, meta, header = core.parse_meta(pp, _read_lines(path), with_header=True)
+    else:
+        colors, types, naces, _used, plan, meta = core.parse_meta(pp, _read_lines(path))
+        header = None
+    extra = {"header_text": header, "cost_params": live.get("cost_params") or {}} if caps.get("cost") else {}
     try:
         report = core.build_report(pp, slicer_colors=colors, slicer_types=types, num_aces=naces, plan_proxy=plan,
                                    live_slots=live["live_slots"], head_ctx=live.get("head_ctx") or {"mode": "multi"},
-                                   token="", filename=name, size=os.path.getsize(path), meta=meta,
-                                   header_text=header, cost_params=live.get("cost_params") or {})
+                                   token="", filename=name, size=os.path.getsize(path), meta=meta, **extra)
     except Exception as e:
         if type(e).__name__ == "PreflightRejected":
             raise MultiAceError(str(e))
@@ -1035,6 +1044,7 @@ def u1_report(client, path, name):
     plans = report.get("plans") if isinstance(report, dict) else None
     if not isinstance(plans, dict) or not any(isinstance(p, dict) and p.get("feasible") for p in plans.values()):
         raise U1CodeError("ce mode de têtes se règle dans le Preflight de multiACE")
+    report["_prefs_ok"] = bool(caps.get("prefs"))
     return report, live, sha
 
 
@@ -1052,7 +1062,8 @@ def u1_prepare(client, path, name, plan_name, prefs, expected):
                                   slicer_types=types, num_aces=naces, live_slots=live["live_slots"],
                                   head_ctx=live.get("head_ctx") or {"mode": "multi"}, mode=plan_name,
                                   meta=meta)
-    if prefs.get("bed") or prefs.get("cam") or prefs.get("flow"):
+    caps = _u1code.get("caps") or {}
+    if caps.get("prefs") and (prefs.get("bed") or prefs.get("cam") or prefs.get("flow")):
         other = tmp_b if final == tmp_a else tmp_a
         core.prepend_print_prefs(final, other, bool(prefs.get("bed")), bool(prefs.get("cam")), bool(prefs.get("flow")))
         final = other
@@ -1108,7 +1119,7 @@ function render(){
     if(p&&p.mapping&&p.mapping.length){h+='<table><tr><th>Filament</th><th>Bobine</th></tr>';
       p.mapping.forEach(function(m){var c=names[m.t]||{},s=m.slot;h+='<tr><td><span class="sw" style="background:'+col(c.hex)+'"></span>'+(m.t+1)+' · '+esc(c.material||"")+' '+esc(c.name||"")+'</td><td>'+(s?('<span class="sw" style="background:'+col(s.color)+'"></span>ACE '+(s.ace+1)+' · slot '+(s.slot+1)+' · '+esc(s.material||"")):'<span class="muted">aucune</span>')+(m.loose_mat?' <span class="muted">(matière différente)</span>':'')+(/fuzzy|fallback|base|canon/.test(m.tier||'')?' <span class="muted">(couleur approchante)</span>':'')+'</td></tr>'});
       h+='</table>';}
-    h+='</div><div class="card opts"><b>Au lancement</b> (préférences multiACE)<br><label><input type="checkbox" id="bed"'+(D.prefs.bed?' checked':'')+'> Maillage du plateau</label><label><input type="checkbox" id="flow"'+(D.prefs.flow?' checked':'')+'> Calibration du flux</label><label><input type="checkbox" id="cam"'+(D.prefs.cam?' checked':'')+'> Time-lapse</label></div>';
+    if(r._prefs_ok===false)h+='</div><div class="card"><b>Au lancement</b> : cette version de multiACE ne fournit pas ces options au plugin. La U1 garde ses réglages ; pour les choisir, utilise « Ouvrir dans le Preflight multiACE ».';else h+='</div><div class="card opts"><b>Au lancement</b> (préférences multiACE)<br><label><input type="checkbox" id="bed"'+(D.prefs.bed?' checked':'')+'> Maillage du plateau</label><label><input type="checkbox" id="flow"'+(D.prefs.flow?' checked':'')+'> Calibration du flux</label><label><input type="checkbox" id="cam"'+(D.prefs.cam?' checked':'')+'> Time-lapse</label></div>';
   }
   if(msg)h+='<div class="card '+(msg.ok?'ok':'err')+'">'+esc(msg.text)+'</div>';
   h+='<div class="btns">';
@@ -1116,7 +1127,7 @@ function render(){
   h+='<button id="pf"'+(busy?' disabled':'')+'>Ouvrir dans le Preflight multiACE</button><button id="x">Fermer</button></div>';
   a.innerHTML=h;
   Array.prototype.forEach.call(document.querySelectorAll('input[name=p]'),function(i){i.onchange=function(){sel=i.value;render()}});
-  var g=document.getElementById("go");if(g)g.onclick=function(){busy=true;msg=null;render();post({a:"print",plan:sel,bed:document.getElementById("bed").checked,flow:document.getElementById("flow").checked,cam:document.getElementById("cam").checked})};
+  var g=document.getElementById("go");if(g)g.onclick=function(){busy=true;msg=null;render();var gv=function(i){var e=document.getElementById(i);return !!(e&&e.checked)};post({a:"print",plan:sel,bed:gv("bed"),flow:gv("flow"),cam:gv("cam")})};
   document.getElementById("pf").onclick=function(){busy=true;msg=null;render();post({a:"preflight"})};
   document.getElementById("x").onclick=function(){post({a:"close"})};
 }
