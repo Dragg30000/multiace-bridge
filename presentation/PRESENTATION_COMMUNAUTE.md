@@ -104,7 +104,7 @@ multiACE Bridge est une bêta fournie **telle quelle, sans aucune garantie** (li
 **Merci**
 À **decay71** et à tous les contributeurs de **multiACE** (sans eux, rien de tout ça n'existerait), à l'équipe **OrcaSlicer** pour le système de plugins, et à **paxx** pour son firmware.
 
-📥 Orca Cloud : Fichier → Plugins → Browse plugins → *multiACE Bridge*
+📥 Orca Cloud : https://cloud.orcaslicer.com/app/plugins/shared-plugins/3e04fba9-887d-4edf-b77a-e38a4bd4fc3d (ou dans Orca : Fichier → Plugins → Browse plugins → *multiACE Bridge*)
 💻 Code, guides et téléchargement : https://github.com/Dragg30000/multiace-bridge
 🐞 Signaler un bug : https://github.com/Dragg30000/multiace-bridge/issues
 📽 Présentation en diapositives : https://github.com/Dragg30000/multiace-bridge/blob/main/presentation/multiACE_Bridge_diaporama_FR.pdf
@@ -198,7 +198,7 @@ multiACE Bridge is a beta provided **as is, without any warranty** (GPL-3.0 lice
 **Thanks**
 To **decay71** and all **multiACE** contributors (none of this would exist without them), to the **OrcaSlicer** team for the plugin system, and to **paxx** for the firmware.
 
-📥 Orca Cloud: File → Plugins → Browse plugins → *multiACE Bridge*
+📥 Orca Cloud: https://cloud.orcaslicer.com/app/plugins/shared-plugins/3e04fba9-887d-4edf-b77a-e38a4bd4fc3d (or in Orca: File → Plugins → Browse plugins → *multiACE Bridge*)
 💻 Code, guides & download: https://github.com/Dragg30000/multiace-bridge
 🐞 Report a bug: https://github.com/Dragg30000/multiace-bridge/issues
 📽 Slide presentation: https://github.com/Dragg30000/multiace-bridge/blob/main/presentation/multiACE_Bridge_slides_EN.pdf
