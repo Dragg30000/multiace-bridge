@@ -39,8 +39,12 @@ On export, the plugin runs **the Preflight code served by your U1** (your multiA
 - **High flow / Standard nozzle warning**: with multiACE the slot decides the head, so a colour can land on another nozzle type; the window tells you.
 - **Force a spool** per filament, passed as is to the U1 code (same as a manual edit in multiACE's web Preflight).
 - **Print start**: bed mesh limited to the printed area, flow (PA) calibration per head, stored PA per spool with “Calibrate before”, soft travel to the purge line, time-lapse.
-- **Optimized / per-layer plans** (multiACE 1.27b propose a new spool layout): steps in order and a **final layout** grid; printing waits until the spools are in place.
+- **Optimized / per-layer plans**: when the loaded spools don't fit, the U1 code's own layout suggestion is shown (multiACE 1.27b and 1.90): steps in order with a **“Done”** button each (the spool's colour, material and multiACE table entry follow it into its new slot), a **final layout** grid; printing waits until the spools are in place.
+- **U1 time estimate** (multiACE 1.90): total time, swap time and purge per plan.
+- **Put in the multiACE queue** (multiACE 1.90 Print Hub): the prepared file waits in multiACE's queue; the U1 checks the spools again at launch.
 - **Send to the U1 without printing**.
+- **Filaments 5 and up** (multiACE 1.90 virtual tools): the “Before slicing” card shows multiACE's *Slicer filament → MMU / Slot* table and whether each slot holds the right colour.
+- Panel: **“path not calibrated”** badge on slots whose Bowden path isn't calibrated in multiACE (Config → Calibration).
 - The **pipeline step is added to your U1 process preset automatically** (save the preset to keep it).
 
 <p align="center"><img src="presentation/images/18b_forcer_bobine.png" width="620"></p>
@@ -48,7 +52,7 @@ On export, the plugin runs **the Preflight code served by your U1** (your multiA
 <p align="center"><img src="presentation/images/19_disposition_finale.png" width="620"></p>
 
 Full presentation: [EN slides](presentation/multiACE_Bridge_slides_EN.pdf) · [diaporama FR](presentation/multiACE_Bridge_diaporama_FR.pdf) · guides in [docs/](docs/).
-The interface is in French for now.
+Interface in French or English (⚙ Options → Language).
 
 ## Install / Installation
 
@@ -56,7 +60,7 @@ The interface is in French for now.
 
 **Manual:** download `multiace_bridge_any.py`, then Orca → File → Plugins → *Install local plugin* → restart Orca → allow network access to your U1.
 
-Requirements: OrcaSlicer 2.5, Snapmaker U1 with **multiACE 1.27b or newer** installed (developed and tested on 1.27b with the paxx12 Extended firmware; the remote screen needs Extended with “Remote Screen” enabled). Tested with 2 ACE Pro on a USB hub.
+Requirements: OrcaSlicer 2.5, Snapmaker U1 with **multiACE 1.27b or newer** installed (tested on 1.27b and multiACE+ 1.90 with the paxx12 Extended firmware; the remote screen needs Extended with “Remote Screen” enabled). Tested with 2 ACE Pro on a USB hub.
 
 ## Bugs & feedback
 
