@@ -5,7 +5,7 @@
 # name = "multiACE Bridge (Snapmaker U1)"
 # description = "Interface pour multiACE de decay71 (Snapmaker U1) dans OrcaSlicer : panneau ACE, interface web multiACE en onglet, et envoi de l'export au Preflight de multiACE."
 # author = "Dragg avec son ami Claude"
-# version = "0.38.0"
+# version = "0.38.1"
 # ///
 """multiACE Bridge - relie OrcaSlicer 2.5 a multiACE (decay71/multiACE) sur une Snapmaker U1.
 
@@ -47,7 +47,7 @@ import uuid
 
 import orca
 
-VERSION = "0.38.0"
+VERSION = "0.38.1"
 TIMEOUT_UI = 4          # secondes, appels faits sur le fil de l'interface
 TIMEOUT_BG = 8          # secondes, appels en arriere-plan
 
@@ -170,6 +170,13 @@ _I18N_EN.update({   # 0.37.0
     " absent": " missing",
     "(table)": "(table)",
     "(Orca : ": "(Orca: ",
+    "pose une bobine": "put a spool",
+    ", pas dans les ACE": ", not in the ACEs",
+    "à poser": "to put",
+    " posant ": " putting ",
+    " bobine(s) hors des ACE": " spool(s) from outside the ACEs",
+    "Couleur du filament %d illisible : « Recharger ».": "Filament %d colour unreadable: “Reload”.",
+    "Après l’avoir posée : le slot reçoit cette couleur et cette matière (une bobine RFID se relit seule)": "Once placed: the slot gets this colour and material (an RFID spool is read again by itself)",
     " · en déplaçant des bobines": " · by moving spools",
 })
 
@@ -1488,6 +1495,9 @@ def used_filaments(info):
     return {t for t, g in enumerate(grams) if g > 0} | set(order)
 
 
+COLOR_TIERS = ("exact_hex", "name_exact", "name_base", "name_canon", "fuzzy")   # la U1 a trouve la couleur
+
+
 def placement_todo(report, plan_name, used=None):
     """Plans « optimize » / « layer » de multiACE 1.27b : une disposition PROPOSEE (tier « planned »),
     pas les bobines chargees. Liste des filaments dont la bobine (celle que la U1 associe a la couleur
@@ -1496,7 +1506,8 @@ def placement_todo(report, plan_name, used=None):
     rows = (plans.get(plan_name) or {}).get("mapping") or []
     if plan_name == "slicer" or not any(m.get("tier") == "planned" for m in rows):
         return []
-    src = {m.get("t"): m.get("slot") for m in (plans.get("slicer") or {}).get("mapping") or []}
+    src = {m.get("t"): m.get("slot") for m in (plans.get("slicer") or {}).get("mapping") or []
+           if m.get("tier") in COLOR_TIERS}
     todo = []
     for m in rows:
         if used is not None and m.get("t") not in used:
@@ -1947,6 +1958,7 @@ function cname(h){
   return (s>0.6&&l<0.55)?"Magenta":"Rose";
 }
 function sw(h){return '<span class="sw" style="background:'+col(h)+'"></span>'}
+var COLOR_TIERS={exact_hex:1,name_exact:1,name_base:1,name_canon:1,fuzzy:1};
 var TIER={exact_hex:"couleur identique",name_exact:"même nom de couleur",name_base:"nom de couleur proche",name_canon:"nom de couleur proche",
   fuzzy:"couleur proche (nuance)",fallback:"même matière, autre couleur",duplicate:"bobine partagée",planned:"disposition proposée",no_slot:"aucune bobine"};
 function tierTag(t){if(!t)return "";var loose=/^loose_/.test(t),b=t.replace(/^loose_/,""),w=/fallback|duplicate|no_slot/.test(b)||loose;
@@ -1979,7 +1991,7 @@ function headOf(row){return row.slot?row.slot.slot:null}
 function placement(){
   var r=D.report||{},k=planKey();if(!r.plans||k==="slicer"||forcedOn())return null;
   var p=r.plans[k]||{},rows=(p.mapping||[]).filter(function(m){return usedT(m.t)});if(!rows.some(function(m){return m.tier==="planned"}))return null;
-  var src={};((r.plans.slicer||{}).mapping||[]).forEach(function(m){if(m.slot)src[m.t]={ace:m.slot.ace,slot:m.slot.slot,color:m.slot.color}});
+  var src={};((r.plans.slicer||{}).mapping||[]).forEach(function(m){if(m.slot&&COLOR_TIERS[m.tier])src[m.t]={ace:m.slot.ace,slot:m.slot.slot,color:m.slot.color}});
   var moves=[],missing=[],tg={};
   rows.forEach(function(m){if(!m.slot)return;var key=m.slot.ace+"_"+m.slot.slot,s=src[m.t];tg[key]={t:m.t,s:s,c:(s&&s.color)||m.slot.color};
     if(!s)missing.push(m.t);else if(s.ace!==m.slot.ace||s.slot!==m.slot.slot)moves.push({t:m.t,from:s,to:{ace:m.slot.ace,slot:m.slot.slot},c:s.color})});
@@ -1991,22 +2003,28 @@ function placement(){
     if(i<0){order.push({park:left[0].to});free[left[0].to.ace+"_"+left[0].to.slot]=1;continue}
     var mv=left.splice(i,1)[0],k3=mv.to.ace+"_"+mv.to.slot,o2=occ[k3];if(o2&&!srcKeys[k3]&&!free[k3])mv.out=o2;
     free[mv.from.ace+"_"+mv.from.slot]=1;order.push(mv)}
+  // couleurs qu'aucune bobine chargee n'a : une bobine a poser (prise hors des ACE)
+  var sc={};(r.slicer_colors||[]).forEach(function(x){sc[x.t]=x});
+  rows.forEach(function(m){if(!m.slot||src[m.t])return;var k4=m.slot.ace+"_"+m.slot.slot,o4=occ[k4],c4=(sc[m.t]||{}).hex||m.slot.color;
+    tg[k4].c=c4;order.push({t:m.t,nw:1,to:{ace:m.slot.ace,slot:m.slot.slot},c:c4,mat:(sc[m.t]||{}).material||m.slot.material||"",out:(o4&&!srcKeys[k4]&&!free[k4])?o4:null})});
   var n=r.num_aces||1;live().forEach(function(x){n=Math.max(n,x.ace+1)});rows.forEach(function(m){if(m.slot)n=Math.max(n,m.slot.ace+1)});
   return {moves:moves,missing:missing,order:order,tg:tg,occ:occ,srcKeys:srcKeys,n:n,ready:!moves.length&&!missing.length}}
 function where(a){return "ACE "+(a.ace+1)+" · slot "+(a.slot+1)+" (T"+(a.slot+1)+")"}
 function layoutCard(L,colors){
   var r=D.report||{},p=(r.plans||{})[planKey()]||{},sp=((r.plans||{}).slicer||{}).swaps,h='<div class="lay'+(L.ready?' ok':'')+'">';
-  h+='<b>Plan « '+esc((D.labels||{})[planKey()]||planKey())+' » : '+p.swaps+' échange(s)'+(sp!=null?' au lieu de '+sp:'')+(L.moves.length?' en déplaçant '+L.moves.length+' bobine(s)':'')+'.</b>';
+  h+='<b>Plan « '+esc((D.labels||{})[planKey()]||planKey())+' » : '+p.swaps+' échange(s)'+(sp!=null?' au lieu de '+sp:'')+(L.moves.length?' en déplaçant '+L.moves.length+' bobine(s)':'')+(L.missing.length?(L.moves.length?' et':' en')+' posant '+L.missing.length+' bobine(s) hors des ACE':'')+'.</b>';
   if(L.ready)h+=' <span class="okc">Les bobines sont en place : tu peux lancer.</span>';
   if(L.order.length){h+='<div class="psub">Dans l’ordre :</div><ol class="steps">';
     L.order.forEach(function(m,i){if(m.park){h+='<li>Pose de côté la bobine de '+esc(where(m.park))+' (elle sera remise ensuite)</li>';return}
+      if(m.nw){var dn2=S.done[i];h+='<li>'+(m.out?'Retire '+esc(cname(m.out.color))+' de '+esc(where(m.to))+', puis : ':'')+'pose une bobine '+sw(m.c)+'<b>'+esc(cname(m.c))+'</b>'+(m.mat?' '+esc(m.mat):'')+' <small>filament '+(m.t+1)+', pas dans les ACE</small> dans <b>'+esc(where(m.to))+'</b>'+
+        (dn2?' <span class="okc">✓ noté</span>':' <button class="ghost mini" data-nw="'+i+'" data-t="'+m.t+'" data-to="'+m.to.ace+'_'+m.to.slot+'"'+(S.busy?' disabled':'')+' title="Après l’avoir posée : le slot reçoit cette couleur et cette matière (une bobine RFID se relit seule)">C’est fait</button>')+'</li>';return}
       var c=colors[m.t]||{},dn=S.done[i];h+='<li>'+(m.out?'Retire '+esc(cname(m.out.color))+' de '+esc(where(m.to))+', puis : ':'')+sw(m.c)+'<b>'+esc(cname(m.c))+'</b> <small>filament '+(m.t+1)+'</small> : '+esc(where(m.from))+' → <b>'+esc(where(m.to))+'</b>'+
         (dn?' <span class="okc">✓ noté</span>':' <button class="ghost mini" data-mv="'+i+'" data-f="'+m.from.ace+'_'+m.from.slot+'" data-to="'+m.to.ace+'_'+m.to.slot+'"'+(S.busy?' disabled':'')+' title="Après l’avoir posée : sa couleur, sa matière et sa bobine de la table multiACE suivent dans le nouveau slot (une bobine RFID se relit seule)">C’est fait</button>')+'</li>'});
     h+='</ol>'}
-  if(L.missing.length)h+='<div class="warnc">Bobine absente des ACE pour : '+L.missing.map(function(t){return "filament "+(t+1)}).join(", ")+'.</div>';
+  if(false)h+='<div class="warnc">Bobine absente des ACE pour : '+L.missing.map(function(t){return "filament "+(t+1)}).join(", ")+'.</div>';
   h+='<div class="psub">Disposition finale :</div><table class="grid"><tr><th></th>';for(var s=0;s<4;s++)h+='<th>Slot '+(s+1)+' (T'+(s+1)+')</th>';h+='</tr>';
   for(var a=0;a<L.n;a++){h+='<tr><th>ACE '+(a+1)+'</th>';for(s=0;s<4;s++){var k=a+"_"+s,t=L.tg[k],o=L.occ[k];
-    if(t){var mv=t.s&&(t.s.ace!==a||t.s.slot!==s);h+='<td'+(mv?' class="mv"':'')+'>'+sw(t.c)+esc(cname(t.c))+' <small>fil. '+(t.t+1)+'</small><br>'+(!t.s?'<span class="tag warn">absente</span>':mv?'<span class="tag mv">à mettre</span>':'<span class="tag">en place</span>')+'</td>'}
+    if(t){var mv=!t.s||(t.s.ace!==a||t.s.slot!==s);h+='<td'+(mv?' class="mv"':'')+'>'+sw(t.c)+esc(cname(t.c))+' <small>fil. '+(t.t+1)+'</small><br>'+(!t.s?'<span class="tag warn">à poser</span>':mv?'<span class="tag mv">à mettre</span>':'<span class="tag">en place</span>')+'</td>'}
     else if(o)h+='<td class="muted">'+sw(o.color)+esc(cname(o.color))+'<br><span class="tag un">'+(L.srcKeys[k]?'libérée':'pas utilisée')+'</span></td>';
     else h+='<td class="muted">vide</td>'}h+='</tr>'}
   h+='</table>';if(!L.ready)h+='<div class="row" style="margin:6px 0 0"><button class="ghost" id="rl2"'+(S.busy?' disabled':'')+'>J’ai placé les bobines : recharger</button><small>Le lancement attend que les bobines soient en place.</small></div>';
@@ -2110,6 +2128,8 @@ function bind(){
   Array.prototype.forEach.call(q('[data-ch]'),function(e){e.onclick=function(ev){ev.stopPropagation();var t=+e.dataset.ch;if(e.dataset.v==="")delete S.forced[t];else S.forced[t]=+e.dataset.v;S.open=null;S.flow=null;render()}});
   Array.prototype.forEach.call(q('.fh'),function(e){e.onchange=function(){var h=+e.dataset.h,i=S.flow.indexOf(h);if(e.checked&&i<0)S.flow.push(h);if(!e.checked&&i>=0)S.flow.splice(i,1)}});
   ["bed","flow","zone","cam","soft"].forEach(function(k){var e=document.getElementById(k);if(e)e.onchange=function(){D.prefs=D.prefs||{};D.prefs[k]=e.checked;render()}});
+  Array.prototype.forEach.call(q('[data-nw]'),function(b){b.onclick=function(){var t=b.dataset.to.split("_").map(Number);
+    S.busy=true;S.msg=null;render();post({a:"newspool",step:+b.dataset.nw,t:+b.dataset.t,to_ace:t[0],to_slot:t[1]})}});
   Array.prototype.forEach.call(q('[data-mv]'),function(b){b.onclick=function(){var f=b.dataset.f.split("_").map(Number),t=b.dataset.to.split("_").map(Number);
     S.busy=true;S.msg=null;render();post({a:"moved",step:+b.dataset.mv,from_ace:f[0],from_slot:f[1],to_ace:t[0],to_slot:t[1]})}});
   Array.prototype.forEach.call(q('[data-pre]'),function(b){b.onclick=function(){var v=b.dataset.pre.split("_").map(Number);b.disabled=true;b.textContent="Ajoutée à la file";post({a:"precal",head:v[0],ace:v[1],slot:v[2]})}});
@@ -2303,6 +2323,40 @@ class U1PreflightWindow:
             self.start(self.job["path"], self.job["name"], self.job["host"], delay=0)
         elif a == "moved":
             threading.Thread(target=self._moved, args=(m,), daemon=True).start()
+        elif a == "newspool":
+            threading.Thread(target=self._newspool, args=(m,), daemon=True).start()
+
+    def _newspool(self, m):
+        """« Disposition finale » : une couleur du plan n'est sur aucune bobine chargee ; l'utilisateur en a
+        pose une. Le slot recoit la couleur et la matiere du filament (etiquette, comme le selecteur de
+        multiACE). Une bobine RFID se relit seule."""
+        try:
+            step, t, ta, ts = (int(m.get(k)) for k in ("step", "t", "to_ace", "to_slot"))
+        except (TypeError, ValueError):
+            return
+        if not (0 <= ta <= 7 and 0 <= ts <= 3 and 0 <= t < 64):
+            return
+        sc = next((x for x in (self.report or {}).get("slicer_colors") or [] if x.get("t") == t), None)
+        color = (str((sc or {}).get("hex") or ""))[:7].lower()
+        if not re.fullmatch(r"#[0-9a-f]{6}", color):
+            self._reply(False, "Couleur du filament %d illisible : « Recharger »." % (t + 1))
+            return
+        client = MultiAce(self.job["host"])
+        try:
+            state = client.state(timeout=TIMEOUT_UI)
+            if str(state.get("printer_state") or "").lower() in ("printing", "paused"):
+                raise MultiAceError("la U1 imprime")
+            dst = {(x["ace"], x["slot"]): x for x in all_slots_from_state(state)}.get((ta, ts))
+            if dst is None:
+                raise MultiAceError("ACE %d · slot %d est vide : pose d'abord la bobine" % (ta + 1, ts + 1))
+            if dst.get("source") != "rfid":
+                client.set_override(ta, ts, gcode_safe((sc or {}).get("material"), 16).upper() or "PLA", "", "", color)
+                client.macro("MULTIACE_REFRESH_OVERRIDES", {}, timeout=60)
+            self._reply(True, "Bobine notée dans ACE %d · slot %d." % (ta + 1, ts + 1), step=step)
+        except PermissionError:
+            self._reply(False, permission_text(self.job["host"]))
+        except Exception as e:
+            self._reply(False, "Échec : %s" % e)
 
     def _moved(self, m):
         """« Disposition finale » : l'utilisateur a deplace une bobine a la main. Son identite (couleur,

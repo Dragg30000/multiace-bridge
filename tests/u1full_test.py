@@ -71,7 +71,7 @@ ok(sent and sent[-1].get("report") and not UP, "après la réponse : fenêtre no
 mb._load_source = real_load
 e = PermissionError(13, "denied", "/x"); ok(mb._denied(RuntimeError("x")) is False and mb._denied(e), "détection d'un refus d'accès")
 # --- 0.35.3 : plan Optimise de multiACE 1.27b = disposition proposee
-rp = {"plans": {"slicer": {"mapping": [{"t": 0, "slot": {"ace": 1, "slot": 3}}, {"t": 1, "slot": {"ace": 0, "slot": 3}}]},
+rp = {"plans": {"slicer": {"mapping": [{"t": 0, "tier": "exact_hex", "slot": {"ace": 1, "slot": 3}}, {"t": 1, "tier": "exact_hex", "slot": {"ace": 0, "slot": 3}}]},
                 "optimize": {"mapping": [{"t": 0, "tier": "planned", "slot": {"ace": 0, "slot": 0}}, {"t": 1, "tier": "planned", "slot": {"ace": 0, "slot": 3}}]},
                 "layer": {"mapping": [{"t": 0, "tier": "exact_hex", "slot": {"ace": 0, "slot": 0}}]}}}
 ok(mb.placement_todo(rp, "optimize") == [0], "disposition proposée : filament 1 pas encore à sa place")

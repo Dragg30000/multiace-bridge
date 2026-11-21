@@ -228,3 +228,41 @@ with sync_playwright() as p:
     pg.screenshot(path="/home/claude/multiace_bridge/test/v380_optimize.png", full_page=True)
     b.close()
 print("v038 OK")
+
+# ---------- 0.38.1 : couleur du plan sur aucune bobine (cas du Grinch : vert absent, marron « même matière »)
+def S_(a, s, c): return {"ace": a, "slot": s, "color": c, "material": "PLA"}
+NO, JA, RO, BL, MA, BE, VE = "#000000", "#f7d959", "#e53935", "#ffffff", "#8d6e63", "#1e88e5", "#43a047"
+repG = {"plans": {"slicer": {"feasible": True, "swaps": 97, "mapping": [
+            {"t": 0, "slot": S_(1, 3, NO), "tier": "name_exact"}, {"t": 1, "slot": S_(1, 1, JA), "tier": "name_exact"},
+            {"t": 2, "slot": S_(1, 2, RO), "tier": "name_exact"}, {"t": 3, "slot": S_(0, 0, BL), "tier": "name_exact"},
+            {"t": 4, "slot": S_(0, 1, MA), "tier": "fallback"}]},
+        "optimize": {"feasible": True, "suggested": True, "swaps": 33, "mapping": [
+            {"t": 0, "slot": S_(0, 0, NO), "tier": "planned"}, {"t": 1, "slot": S_(0, 1, JA), "tier": "planned"},
+            {"t": 2, "slot": S_(0, 2, RO), "tier": "planned"}, {"t": 4, "slot": S_(0, 3, VE), "tier": "planned"},
+            {"t": 3, "slot": S_(1, 0, BL), "tier": "planned"}]}},
+        "slicer_colors": [{"t": i, "hex": h + "ff", "material": "PLA"} for i, h in enumerate([NO, JA, RO, BL, VE])],
+        "live_slots": [S_(0, 0, BL), S_(0, 1, MA), S_(0, 3, BE), S_(1, 1, JA), S_(1, 2, RO), S_(1, 3, NO)], "num_aces": 2}
+ok(4 in mb.placement_todo(repG, "optimize"), "Python : le vert (absent des ACE) reste à faire même si le marron « même matière » est chargé")
+D3 = dict(D2, report=repG, info={"sliced": [], "grams": [], "order": []})
+open("/home/claude/testdata/v0381.html", "w").write(mb.U1_PAGE.replace("<head>", "<head>" + fake, 1).replace("__DATA__", json.dumps(D3)))
+with sync_playwright() as p:
+    b = p.chromium.launch(executable_path="/usr/bin/google-chrome"); pg = b.new_page(viewport={"width": 1100, "height": 1500}); pg.goto("file:///home/claude/testdata/v0381.html"); pg.wait_for_timeout(300)
+    pg.click("input[value=optimize]"); pg.wait_for_timeout(100)
+    steps = pg.locator("ol.steps li").all_inner_texts()
+    print("\n".join(steps))
+    ok(not any("Marron filament" in x for x in steps), "le marron n'est plus déplacé à la place du vert")
+    ok(any("pose une bobine" in x and "Vert" in x and "Retire Bleu" in x and "slot 4" in x for x in steps), "étape : retirer le bleu, poser une bobine verte dans ACE 1 · slot 4")
+    ok(any("Retire Marron" in x and "Jaune" in x for x in steps), "le marron est retiré pour le jaune")
+    ok("posant 1 bobine(s) hors des ACE" in pg.inner_text(".lay"), "titre : 4 déplacées et 1 à poser")
+    pg.screenshot(path="/home/claude/multiace_bridge/test/v381_layout.png", full_page=True)
+    pg.locator("[data-nw]").click(); m = pg.evaluate("window.__p")[-1]
+    ok(m["a"] == "newspool" and (m["t"], m["to_ace"], m["to_slot"]) == (4, 0, 3), "clic -> newspool : %s" % m)
+    b.close()
+W.report = repG; POSTS.clear(); sent.clear()
+STATE.update(printer_state="ready", aces=[{"idx": 0, "slots": [slot(0, None), slot(1, None), slot(2, None), slot(3, "#cccccc", None)]}])
+W._newspool({"step": 4, "t": 4, "to_ace": 0, "to_slot": 3})
+ov = [x for x in POSTS if x.get("_path", "").endswith("/slot-override")]
+ok(ov and ov[0]["color"] == VE and ov[0]["material"] == "PLA" and (ov[0]["ace"], ov[0]["slot"]) == (0, 3) and sent[-1]["done"], "nouvelle bobine : vert PLA posé sur ACE 1 · slot 4")
+POSTS.clear(); W._newspool({"step": 4, "t": 4, "to_ace": 0, "to_slot": 0})
+ok(not POSTS and not sent[-1]["done"], "slot vide -> refusé")
+print("v0381 OK")
