@@ -268,7 +268,7 @@ state["printer_state"] = "ready"
 # prefs, hide, tap
 ap.on_message({"command": "prefs_set", "screen": "bottom", "compact": True})
 ok(mb.load_settings()["screen"] == "bottom" and mb.load_settings()["compact"] is True, "prefs saved")
-P.posts.clear(); ap.on_message({"command": "prefs_get"}); ok(P.posts[-1] == {"command": "prefs", "host": "127.0.0.1:%d" % PORT, "screen": "bottom", "compact": True, "prep_pos": "top", "folds": {}, "camera": "off", "auto_home": False, "ace_guard": True, "u1_code": False, "real_nozzles": ["", "", "", ""], "auto_pipeline": True}, "prefs sent")
+P.posts.clear(); ap.on_message({"command": "prefs_get"}); ok(P.posts[-1] == {"command": "prefs", "host": "127.0.0.1:%d" % PORT, "screen": "bottom", "compact": True, "prep_pos": "top", "folds": {}, "camera": "off", "auto_home": False, "ace_guard": True, "u1_code": False, "real_nozzles": ["", "", "", ""], "auto_pipeline": True, "lang": "auto", "lang_now": mb.ui_lang()}, "prefs sent")
 ap.on_message({"command": "prefs_set", "screen": "sideways"}); ok(mb.load_settings()["screen"] == "bottom", "bad screen value ignored")
 ap.on_message({"command": "hide"}); ok(P.hidden and notes and notes[-1][2] == "Afficher", "hide -> panel hidden + notification")
 ok(notes[-1][3]() is True and not P.hidden, "notification link shows panel again")

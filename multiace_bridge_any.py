@@ -5,7 +5,7 @@
 # name = "multiACE Bridge (Snapmaker U1)"
 # description = "Interface pour multiACE de decay71 (Snapmaker U1) dans OrcaSlicer : panneau ACE, interface web multiACE en onglet, et envoi de l'export au Preflight de multiACE."
 # author = "Dragg avec son ami Claude"
-# version = "0.38.1"
+# version = "0.38.2"
 # ///
 """multiACE Bridge - relie OrcaSlicer 2.5 a multiACE (decay71/multiACE) sur une Snapmaker U1.
 
@@ -47,7 +47,7 @@ import uuid
 
 import orca
 
-VERSION = "0.38.1"
+VERSION = "0.38.2"
 TIMEOUT_UI = 4          # secondes, appels faits sur le fil de l'interface
 TIMEOUT_BG = 8          # secondes, appels en arriere-plan
 
@@ -173,7 +173,11 @@ _I18N_EN.update({   # 0.37.0
     "pose une bobine": "put a spool",
     ", pas dans les ACE": ", not in the ACEs",
     "à poser": "to put",
-    " posant ": " putting ",
+    " et en posant ": " and putting ",
+    "attente": "waiting",
+    "Aucune": "None",
+    "échec": "failed",
+    " en posant ": " by putting ",
     " bobine(s) hors des ACE": " spool(s) from outside the ACEs",
     "Couleur du filament %d illisible : « Recharger ».": "Filament %d colour unreadable: “Reload”.",
     "Après l’avoir posée : le slot reçoit cette couleur et cette matière (une bobine RFID se relit seule)": "Once placed: the slot gets this colour and material (an RFID spool is read again by itself)",
@@ -2012,11 +2016,11 @@ function placement(){
 function where(a){return "ACE "+(a.ace+1)+" · slot "+(a.slot+1)+" (T"+(a.slot+1)+")"}
 function layoutCard(L,colors){
   var r=D.report||{},p=(r.plans||{})[planKey()]||{},sp=((r.plans||{}).slicer||{}).swaps,h='<div class="lay'+(L.ready?' ok':'')+'">';
-  h+='<b>Plan « '+esc((D.labels||{})[planKey()]||planKey())+' » : '+p.swaps+' échange(s)'+(sp!=null?' au lieu de '+sp:'')+(L.moves.length?' en déplaçant '+L.moves.length+' bobine(s)':'')+(L.missing.length?(L.moves.length?' et':' en')+' posant '+L.missing.length+' bobine(s) hors des ACE':'')+'.</b>';
+  h+='<b>Plan « '+esc((D.labels||{})[planKey()]||planKey())+' » : '+p.swaps+' échange(s)'+(sp!=null?' au lieu de '+sp:'')+(L.moves.length?' en déplaçant '+L.moves.length+' bobine(s)':'')+(L.missing.length?(L.moves.length?' et en posant ':' en posant ')+L.missing.length+' bobine(s) hors des ACE':'')+'.</b>';
   if(L.ready)h+=' <span class="okc">Les bobines sont en place : tu peux lancer.</span>';
   if(L.order.length){h+='<div class="psub">Dans l’ordre :</div><ol class="steps">';
     L.order.forEach(function(m,i){if(m.park){h+='<li>Pose de côté la bobine de '+esc(where(m.park))+' (elle sera remise ensuite)</li>';return}
-      if(m.nw){var dn2=S.done[i];h+='<li>'+(m.out?'Retire '+esc(cname(m.out.color))+' de '+esc(where(m.to))+', puis : ':'')+'pose une bobine '+sw(m.c)+'<b>'+esc(cname(m.c))+'</b>'+(m.mat?' '+esc(m.mat):'')+' <small>filament '+(m.t+1)+', pas dans les ACE</small> dans <b>'+esc(where(m.to))+'</b>'+
+      if(m.nw){var dn2=S.done[i];h+='<li>'+(m.out?'Retire '+esc(cname(m.out.color))+' de '+esc(where(m.to))+', puis : ':'')+'pose une bobine '+sw(m.c)+'<b>'+esc(cname(m.c))+'</b>'+(m.mat?' '+esc(m.mat):'')+' <small>filament '+(m.t+1)+', pas dans les ACE</small> → <b>'+esc(where(m.to))+'</b>'+
         (dn2?' <span class="okc">✓ noté</span>':' <button class="ghost mini" data-nw="'+i+'" data-t="'+m.t+'" data-to="'+m.to.ace+'_'+m.to.slot+'"'+(S.busy?' disabled':'')+' title="Après l’avoir posée : le slot reçoit cette couleur et cette matière (une bobine RFID se relit seule)">C’est fait</button>')+'</li>';return}
       var c=colors[m.t]||{},dn=S.done[i];h+='<li>'+(m.out?'Retire '+esc(cname(m.out.color))+' de '+esc(where(m.to))+', puis : ':'')+sw(m.c)+'<b>'+esc(cname(m.c))+'</b> <small>filament '+(m.t+1)+'</small> : '+esc(where(m.from))+' → <b>'+esc(where(m.to))+'</b>'+
         (dn?' <span class="okc">✓ noté</span>':' <button class="ghost mini" data-mv="'+i+'" data-f="'+m.from.ace+'_'+m.from.slot+'" data-to="'+m.to.ace+'_'+m.to.slot+'"'+(S.busy?' disabled':'')+' title="Après l’avoir posée : sa couleur, sa matière et sa bobine de la table multiACE suivent dans le nouveau slot (une bobine RFID se relit seule)">C’est fait</button>')+'</li>'});

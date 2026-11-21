@@ -4,6 +4,10 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (2 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.38.2 (21/11/2026)
+- Interface anglaise : textes restés en français traduits (« attente » / « échec » dans la file, « Aucune » dans le choix de bobine, étape « pose une bobine » de la Disposition finale). Rien d'autre ne change.
+- Vidéo démo (anglais, 40 s, carrée) : `presentation\multiACE_Bridge_demo.mp4`.
+
 ## 0.38.1 (21/11/2026)
 - **« Disposition finale » : couleur qu'aucune bobine chargée n'a.** Premier essai réel (Grinch, filament 5 vert absent des ACE) : le plugin demandait de déplacer la bobine marron (que la U1 n'avait associée que par « même matière, autre couleur ») à la place du vert. Maintenant, seule une bobine dont la U1 a reconnu la couleur est déplacée ; pour une couleur absente, l'étape devient « Retire Bleu de ACE 1 · slot 4, puis pose une bobine Vert PLA (filament 5, pas dans les ACE) dans ACE 1 · slot 4 », avec son « C'est fait » qui donne au slot la couleur et la matière du filament. Le titre l'indique (« en déplaçant 4 bobine(s) et posant 1 bobine(s) hors des ACE ») et la grille marque « à poser ».
 - Premier essai réel de la 0.38.0 sur multiACE+ 1.90 : « Optimisé » proposé (33 échanges au lieu de 97, 13 h 24 au lieu de 16 h 20), file multiACE OK (« Loadout matches - ready to launch »).
