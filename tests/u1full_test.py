@@ -104,3 +104,58 @@ open(mb._ran_path(), "w").write(json.dumps({"version": "0.34.3", "storage": "/au
 ok(st.get("ran_here") is False and st.get("ran_version") == "0.34.3", "autre copie du plugin détectée")
 Prn.config_value = lambda self, k: "Bambu Lab P1S"; CFG["slicing_pipeline_plugin"] = ""; TX.clear()
 st = mb.pipeline_status(force=True); ok(st["state"] == "not_u1" and not TX, "profil d'une autre imprimante : jamais modifié")
+# --- 0.35.5 : interface en anglais
+mb._LANG["v"] = "fr"
+ok(mb.tr("Impression lancée avec %s." % "x") == "Impression lancée avec x." and mb.i18n_page(mb.U1_PAGE) == mb.U1_PAGE, "français : rien ne change")
+mb._LANG["v"] = "en"
+ok(mb.tr("ACE 2 : le séchage s'est arrêté avant la fin (il restait 30 min à 45 °C). Coupure de l'ACE ?") ==
+   "ACE 2: drying stopped before the end (30 min left at 45 °C). ACE dropout?", "anglais : message avec valeurs : %s" % mb.tr("ACE 2 : le séchage s'est arrêté avant la fin (il restait 30 min à 45 °C). Coupure de l'ACE ?"))
+ok(mb.tr("Étape Preflight ajoutée à « PLA U1 »") == "Preflight step added to “PLA U1”", "anglais : guillemets")
+pg = mb.i18n_page(mb.PANEL); ok('<html lang="en">' in pg or "__i18nT" in pg, "page traduite à l'affichage")
+ok(mb.PIPELINE_NAME == "multiACE : envoyer au Preflight", "identifiant de l'étape jamais traduit")
+mb._LANG["v"] = None
+# --- 0.35.6 : filaments du projet non utilises masques
+ok(mb.used_filaments({"grams": [10, 0, 0], "order": [0]}) == {0} and mb.used_filaments({}) is None, "filaments utilisés : grammes ou outil appelé")
+ok(mb.placement_todo(rp, "optimize", used={1}) == [] and mb.placement_todo(rp, "optimize", used={0}) == [0], "disposition : seuls les filaments utilisés comptent")
+W = mb._U1PF; sent = []; W._send = lambda d: sent.append(d); mb._LANG["v"] = "fr"
+W.start(g, "real.gcode", host, delay=0); time.sleep(8); d = sent[-1]
+d["info"]["grams"] = [10] + [0] * (len(d["info"]["grams"]) - 1); d["info"]["order"] = [0]
+d["load"]["real"] = ["Standard", "Standard", "Haut débit", "Standard"]
+d["info"]["sliced"] = [{"head": 0, "nozzle": "Standard"}] + [{"head": 0, "nozzle": "Haut débit"}] * (len(d["info"]["sliced"]) - 1)
+html = mb.U1_PAGE.replace("__DATA__", json.dumps(d).replace("</", "<\\/"))
+open("/home/claude/testdata/one.html", "w").write(html)
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p_:
+    b_ = p_.chromium.launch(executable_path="/usr/bin/google-chrome"); pg_ = b_.new_page(viewport={"width": 1100, "height": 900})
+    pg_.goto("file:///home/claude/testdata/one.html"); pg_.wait_for_timeout(300)
+    nrows = pg_.locator("table:not(.grid) tr").count() - 1; txt = pg_.inner_text("body"); b_.close()
+ok(nrows == 1 and "4 filament(s) du projet non utilisé(s)" in txt and "⚠ Filament" not in txt, "un seul filament utilisé : une ligne, pas d'alerte parasite (%d ligne(s))" % nrows)
+mb._LANG["v"] = None
+# --- 0.35.7 : multiACE 1.90, Klipper qui redemarre
+real_get2 = mb.MultiAce.get_json
+for bad in ({"klippy": "disconnected"}, {"error": "moonraker: x"}):
+    mb.MultiAce.get_json = lambda self, path, timeout=8, b=bad: dict(b) if path == "/state" else real_get2(self, path, timeout)
+    try: mb.MultiAce(host).state(); ok(False, "klippy")
+    except mb.MultiAceError as e: ok("Klipper n'est pas prêt" in str(e), "état sans ACE (%s) : rien n'en est conclu" % list(bad)[0])
+mb.MultiAce.get_json = real_get2
+ok(isinstance(mb.MultiAce(host).state(), dict), "état normal inchangé")
+# --- 0.36.0 : estimation de la U1, buses fournies par multiACE, raisons lisibles
+LIVE["head_ctx"] = {"mode": "multi", "head_nozzle_types": {"0": "high_flow", "1": "high_flow", "2": "standard", "3": "high_flow"}}
+LIVE["cost_params"] = {}
+SRC.clear(); SRC.update(postprocess=open(ROOT + "/tools/post_process_virtual_toolheads.py").read(), core=open(ROOT + "/web/backend/preflight_core.py").read())
+import os as _os
+SRC["swap_cost"] = open(ROOT + "/tools/swap_cost.py").read()
+mb._u1code.update(sha=None); mb._LANG["v"] = "fr"
+W = mb._U1PF; sent = []; W._send = lambda d: sent.append(d)
+W.start(g, "real.gcode", host, delay=0); time.sleep(10); d = sent[-1]
+ok(d["load"]["real"] == ["Haut débit", "Haut débit", "Standard", "Haut débit"] and d["load"]["real_src"] == "multiACE", "buses lues dans les données de multiACE : %s" % d["load"].get("real"))
+est = (d["report"]["plans"]["slicer"] or {}).get("estimate") or {}
+html = mb.U1_PAGE.replace("__DATA__", json.dumps(d).replace("</", "<\\/")); open("/home/claude/testdata/est.html", "w").write(html)
+with sync_playwright() as p_:
+    b_ = p_.chromium.launch(executable_path="/usr/bin/google-chrome"); pg_ = b_.new_page(viewport={"width": 1100, "height": 900})
+    pg_.goto("file:///home/claude/testdata/est.html"); pg_.wait_for_timeout(300); txt = pg_.inner_text("body"); b_.close()
+ok(est.get("total_s") and "durée estimée par la U1" in txt and "≈ " in txt, "estimation de la U1 affichée quand elle existe (%s s)" % est.get("total_s"))
+ok("loaded spools do not fit" not in txt and "no layer-feasible" not in txt, "raisons des plans en clair")
+LIVE["head_ctx"] = {"mode": "multi"}; mb._LANG["v"] = None
+# --- 0.36.1 : version de multiACE lue dans /api/version
+ok(d.get("version") == "1.90-test", "version de multiACE affichée : %r" % d.get("version"))

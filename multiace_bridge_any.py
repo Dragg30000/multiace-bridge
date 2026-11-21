@@ -5,7 +5,7 @@
 # name = "multiACE Bridge (Snapmaker U1)"
 # description = "Interface pour multiACE de decay71 (Snapmaker U1) dans OrcaSlicer : panneau ACE, interface web multiACE en onglet, et envoi de l'export au Preflight de multiACE."
 # author = "Dragg avec son ami Claude"
-# version = "0.35.4"
+# version = "0.38.0"
 # ///
 """multiACE Bridge - relie OrcaSlicer 2.5 a multiACE (decay71/multiACE) sur une Snapmaker U1.
 
@@ -32,6 +32,7 @@ Licence GPL-3.0, comme multiACE.
 import ast
 import hashlib
 import importlib.util
+import inspect
 import json
 import os
 import sys
@@ -46,7 +47,7 @@ import uuid
 
 import orca
 
-VERSION = "0.35.4"
+VERSION = "0.38.0"
 TIMEOUT_UI = 4          # secondes, appels faits sur le fil de l'interface
 TIMEOUT_BG = 8          # secondes, appels en arriere-plan
 
@@ -128,6 +129,7 @@ def load_settings():
     auto_home = data.get("auto_home") if isinstance(data.get("auto_home"), bool) else False
     ace_guard = data.get("ace_guard") if isinstance(data.get("ace_guard"), bool) else True
     u1_code = data.get("u1_code") if isinstance(data.get("u1_code"), bool) else True
+    lang = data.get("lang") if data.get("lang") in ("auto", "fr", "en") else "auto"
     real = data.get("real_nozzles") if isinstance(data.get("real_nozzles"), list) else []
     real_nozzles = [(real[h] if h < len(real) and real[h] in NOZZLE_CHOICES else "") for h in range(4)]
     profile_base = data.get("profile_base") if isinstance(data.get("profile_base"), str) else ""
@@ -136,8 +138,170 @@ def load_settings():
             "screen": screen, "camera": camera, "compact": compact, "prep_pos": prep_pos, "folds": folds,
             "profile_base": profile_base, "filaments": filaments, "auto_pipeline": auto_pipeline,
             "auto_home": auto_home, "ace_guard": ace_guard, "u1_code": u1_code,
-            "real_nozzles": real_nozzles}
+            "real_nozzles": real_nozzles, "lang": lang}
 
+
+
+# ---- langue de l'interface (fr par defaut ; en : table _I18N_EN appliquee a l'affichage)
+
+LANGS = ("auto", "fr", "en")
+_I18N_EN = {'impossible avec les bobines chargées': 'not possible with the loaded spools', 'aucune répartition possible sur les têtes': 'no possible head assignment', 'aucune répartition par couche possible': 'no per-layer assignment possible', 'aucune disposition par couche possible': 'no per-layer layout possible', 'plus de 4 couleurs dans une couche': 'more than 4 colours in a layer', 'trop de couleurs pour les têtes': 'too many colours for the heads', 'durée estimée par la U1': 'time estimated by the U1', 'd’échanges': 'of swaps', 'dont': 'incl.', 'purge': 'purge', 'impossible': 'not possible', ' filament(s) du projet non utilisé(s) dans ce fichier : masqué(s).': ' project filament(s) not used in this file: hidden.', 'autre copie': 'another copy', 'HAUT DÉBIT': 'HIGH FLOW', 'TRÈS HAUT DÉBIT': 'ULTRA HIGH FLOW', 'Avant de trancher': 'Before slicing', 'en attente': 'waiting', 'terminé': 'done', 'échoué': 'failed', 'annulé': 'cancelled', 'annulée': 'cancelled', 'nom de couleur proche': 'close colour name', 'couleur proche (nuance)': 'close colour (shade)', 'Automatique': 'Automatic', 'Retire %s de ACE': 'Remove %s from ACE', 'Par couche (layer)': 'Per layer (layer)', 'Disposition finale :': 'Final layout:', 'Au lancement': 'Print start', 'en place': 'in place', 'source inconnue': 'unknown source', 'Couleur': 'Colour', 'Marque': 'Brand', 'Poids': 'Weight', 'g restants': 'g left', 'buse': 'nozzle', 'absente': 'missing', 'Plans': 'Plans', 'Têtes': 'Heads', 'Calibration': 'Calibration', 'Mode': 'Mode', 'déconnecté': 'disconnected', 'Vérification': 'Check', 'Fichier': 'File', 'impression': 'printing', 'en impression': 'printing', 'pause': 'paused', 'Remplir': 'Fill', 'Charger tout': 'Load all', 'Tout charger': 'Load all', 'h restantes': 'h left', 'min restantes': 'min left', 'restant': 'left', 'restante': 'left', ' : ': ': ', ' ?': '?', ' ;': ';', 'Séchage': 'Drying', 'Bobine': 'Spool', 'Correspondance': 'Match', 'Actualiser': 'Refresh', 'Humidité dans l’ACE': 'Humidity in the ACE', 'Température dans l’ACE': 'Temperature in the ACE', 'Supprime la saisie manuelle': 'Removes the manual entry', 'sur T': 'on T', 'sur': 'on', 'Charge cette bobine sur T': 'Loads this spool on T', 'Bobine de la table multiACE associée à ce slot (utile sans RFID : poids, calibration PA mémorisée)': 'Spool from the multiACE table linked to this slot (useful without RFID: weight, stored PA calibration)', '« ': '“', ' »': '”', '«': '“', '»': '”', 'Confirmer ?': 'Confirm?', 'Agrandir': 'Expand', 'Retirer': 'Remove', 'Afficher': 'Show', 'hors ligne': 'offline', 'en cours': 'running', 'Adresse invalide': 'Invalid address', 'Déplacer cette carte': 'Move this card', '↑ en haut': '↑ to top', '↓ en bas': '↓ to bottom', 'Clique pour toucher l’écran de la U1': 'Click to touch the U1 screen', 'en haut': 'top', 'en bas': 'bottom', 'Recalculer avec mes choix': 'Recompute with my choices', 'Imprimer': 'Print', "multiACE : envoi direct a l'imprimante, Preflight non utilise": 'multiACE: direct upload to the printer, Preflight not used', 'multiACE : G-code deja traite par multiACE (script de post-traitement actif ?), non envoye': 'multiACE: G-code already processed by multiACE (post-processing script active?), not sent', 'multiACE : deja traite': 'multiACE: already processed', 'multiACE : %d filament(s) utilise(s), envoi reserve a %d et plus': 'multiACE: %d filament(s) used, sending is for %d or more', "Langue enregistrée : ferme et rouvre le panneau (ou redémarre OrcaSlicer) pour l'appliquer partout. / Language saved: close and reopen the panel (or restart OrcaSlicer) to apply it everywhere.": 'Language saved: close and reopen the panel (or restart OrcaSlicer) to apply it everywhere.', 'Clique sur une bobine pour modifier sa couleur, sa matière ou son poids. Clique deux fois sur un bouton pour confirmer une action. Charger / échanger / décharger / sécher / calibrer s’enchaînent dans une file d’attente (« Arrêter » le séchage part tout de suite).': 'Click a spool to change its colour, material or weight. Click a button twice to confirm an action. Load / swap / unload / dry / calibrate run one after another in a queue (“Stop” drying runs right away).', "Si un ACE se déconnecte puis revient : le plugin relance son séchage là où il en était, et pendant une impression il relance la poussée du filament, uniquement pour la tête qui imprime (si multiACE ne l'a pas déjà fait).": "If an ACE disconnects and comes back: the plugin restarts its drying where it was, and during a print it restarts the filament feed, only for the printing head (if multiACE hasn't already done it).", 'Choisis une bobine dans la dernière colonne pour imposer ta couleur : le plan passe sur « Comme tranché » et la U1 applique tes choix tels quels (comme dans son Preflight). Le type de buse de chaque tête est rappelé.': 'Pick a spool in the last column to force your colour: the plan switches to “As sliced” and the U1 applies your choices as is (like in its Preflight). Each head’s nozzle type is shown.', "À l'export, le plugin exécute dans Orca le Preflight fourni par ta U1 (code multiACE de ta version), vérifie tout puis imprime. Décoché : le fichier d'origine part dans le Preflight de multiACE, sans rien exécuter.": 'On export, the plugin runs inside Orca the Preflight served by your U1 (your multiACE version’s code), checks everything, then prints. Unticked: the original file goes to multiACE’s Preflight and nothing is run.', "Quand l'imprimante est une U1 et que le profil de traitement n'a pas l'étape « multiACE : envoyer au Preflight », le plugin l'ajoute. Le profil devient « modifié » : enregistre-le pour la garder.": 'When the printer is a U1 and the process preset lacks the “multiACE : envoyer au Preflight” step, the plugin adds it. The preset becomes “modified”: save it to keep the step.', "Calibration de ACE %d · slot %d sur T%d ajoutée à la file du panneau multiACE. Attends qu'elle soit finie, puis « Recharger » : le PA est mémorisé sur la bobine.": 'Calibration of ACE %d · slot %d on T%d added to the multiACE panel queue. Wait until it’s done, then “Reload”: the PA is stored on the spool.', "multiACE : acces reseau non autorise depuis le tranchage. Ouvre l'onglet multiACE, clique Enregistrer pour autoriser %s, puis renvoie depuis l'onglet.": 'multiACE: network access not allowed from slicing. Open the multiACE tab, click Save to allow %s, then resend from the tab.', 'multiACE : ce G-code a ete modifie par U1 Control ("U1 print setup"). Decoche-le pour ce profil afin que multiACE recoive l\'export original.': 'multiACE: this G-code was modified by U1 Control ("U1 print setup"). Untick it for this preset so multiACE gets the original export.', "OrcaSlicer n'a pas autorisé le plugin à ouvrir ses fichiers. Réexporte et réponds « Oui » à la demande d'autorisation (événement « open »).": 'OrcaSlicer didn’t allow the plugin to open its files. Export again and answer “Yes” to the permission request (“open” event).', 'Terminé : %s. Le capteur de %s indique encore du filament : si la tête est bien vide, ignore ce message ; sinon retire le reste à la main.': 'Done: %s. The %s sensor still reports filament: if the head is really empty, ignore this; otherwise remove the rest by hand.', 'Chargement automatique : les têtes vides ou avec une autre bobine au départ sont chargées depuis les ACE avant la première couche (': 'Auto-load: heads that are empty or hold another spool at start are loaded from the ACEs before the first layer (', "OrcaSlicer a bloqué l'accès réseau vers %s. Clique « Autoriser et réessayer » et accepte la demande d'OrcaSlicer (une seule fois).": 'OrcaSlicer blocked network access to %s. Click “Allow and retry” and accept OrcaSlicer’s request (only once).', 'OrcaSlicer te demande une autorisation pour le plugin (événement « open ») : réponds « Oui », la préparation continue toute seule.': 'OrcaSlicer is asking you for a permission for the plugin (“open” event): answer “Yes”, preparation goes on by itself.', "T%d : la poussée de l'ACE %d ne reprend pas après %d essais. Vérifie l'ACE (câble, hub) ; l'impression continue sans aide.": 'T%d: ACE %d feed doesn’t resume after %d tries. Check the ACE (cable, hub); the print goes on without assist.', 'Cette version de multiACE ne permet pas d’imposer une bobine depuis Orca : utilise « Ouvrir dans le Preflight multiACE ».': 'This multiACE version doesn’t allow forcing a spool from Orca: use “Open in multiACE Preflight”.', "Si la U1 n'a pas fait son homing, le plugin le fait tout seul avant de charger / échanger / décharger, sans te demander.": 'If the U1 isn’t homed, the plugin homes it by itself before load / swap / unload, without asking.', "%s : la U1 n'est pas référencée (homing). Clique « Faire le homing puis reprendre » : la U1 fait son Home puis reprend.": '%s: the U1 isn’t homed. Click “Home then resume”: the U1 homes and then resumes.', "la U1 n'est pas référencée (l'écran affiche « Axis Movement Anomaly ») : il faut un homing avant de bouger les têtes.": 'the U1 isn’t homed (the screen shows “Axis Movement Anomaly”): homing is needed before moving the heads.', '⚠ Pas de chargement automatique dans le fichier : vérifie que les bonnes bobines sont sur les têtes avant de lancer.': '⚠ No auto-load in the file: check the right spools are on the heads before printing.', 'Ancien profil « Snapmaker U1 multiACE » supprimé (il disparaît de la liste au plus tard au prochain démarrage).': 'Old “Snapmaker U1 multiACE” profile removed (it disappears from the list at the latest on next start).', "la U1 est %s : action refusée. Regarde l'écran de la U1 et l'interface multiACE, puis clique « Reprendre ».": 'the U1 is %s: action refused. Check the U1 screen and the multiACE interface, then click “Resume”.', 'Chargement automatique au départ : %s (têtes vides ou avec une autre bobine chargées avant la 1re couche).': 'Auto-load at start: %s (empty heads or heads with another spool loaded before the 1st layer).', "multiACE : impression préparée par le Preflight de la U1 (envoi direct d'OrcaSlicer annulé, c'est normal).": 'multiACE: print prepared by the U1 Preflight (OrcaSlicer’s direct upload cancelled, that’s normal).', '(le profil palpe tout le plateau : ajoute MESH_MIN / MESH_MAX, rien ne change si ton profil le fait déjà)': '(the preset probes the whole bed: adds MESH_MIN / MESH_MAX, nothing changes if your preset already does it)', "multiACE : envoi au Preflight impossible (%s). Le G-code est garde : renvoie-le depuis l'onglet multiACE.": 'multiACE: sending to the Preflight failed (%s). The G-code is kept: resend it from the multiACE tab.', "T%d ne reçoit plus de poussée de l'ACE %d, mais ce n'est pas l'ACE actif : rien envoyé par sécurité.": 'T%d no longer gets feed from ACE %d, but it isn’t the active ACE: nothing sent, for safety.', 'multiACE : adresse de la U1 inconnue : renseigne-la dans le panneau ACE (Options → Adresse de la U1)': 'multiACE: U1 address unknown: set it in the ACE panel (Options → U1 address)', "Chauffe le plateau, attend 2 min, mesure le maillage (AUTO_BED_MESH_CALIBRATE) ; la U1 l'enregistre": 'Heats the bed, waits 2 min, probes the mesh (AUTO_BED_MESH_CALIBRATE); the U1 saves it', 'Adresse de la U1 non renseignee : entre son IP dans le panneau ACE (Options → Adresse de la U1).': 'U1 address not set: enter its IP in the ACE panel (Options → U1 address).', "place d'abord les bobines comme dans la « Disposition finale » (filament %s), puis « Recharger »": 'first place the spools as in the “Final layout” (filament %s), then “Reload”', 'Pour OrcaSlicer, le filament N part sur TN ; en vrai, il part sur la tête du slot de sa bobine.': 'For OrcaSlicer, filament N goes to TN; in reality it goes to the head of its spool’s slot.', "ACE %d : le séchage s'est arrêté avant la fin (il restait %d min à %d °C). Coupure de l'ACE ?": 'ACE %d: drying stopped before the end (%d min left at %d °C). ACE dropout?', 'si besoin, puis mesure son PA (FLOW_CALIBRATE) et le mémorise sur la bobine pour cette buse': 'if needed, then measures its PA (FLOW_CALIBRATE) and stores it on the spool for this nozzle', "Entre l'adresse IP de ta U1 (affichée dans ses réglages réseau, par exemple 192.168.1.50).": 'Enter your U1’s IP address (shown in its network settings, e.g. 192.168.1.50).', "Klipper n'est pas prêt sur la U1 (redémarrage ou erreur en cours) : attends puis réessaie.": 'Klipper isn’t ready on the U1 (restart or error in progress): wait and try again.', '(après les calibrations : 100 mm/s, accélération réduite, buse remontée de 5 mm avant)': '(after calibrations: 100 mm/s, reduced acceleration, nozzle lifted 5 mm first)', ". Envoi direct d'OrcaSlicer annule : lance l'impression depuis le Preflight multiACE.": '. OrcaSlicer’s direct upload cancelled: start the print from the multiACE Preflight.', "%s envoyé sur la U1 sans lancer (%s) : lance-le depuis l'écran ou Fluidd.%s": '%s sent to the U1 without printing (%s): start it from the screen or Fluidd.%s', "Vérification : %s. Le fichier d'origine part dans le Preflight de multiACE.": 'Check: %s. The original file goes to the multiACE Preflight.', "les bobines ont changé depuis l'analyse : vérifie la nouvelle proposition": 'spools changed since the analysis: check the new proposal', 'Homing automatique activé : la U1 fera son homing toute seule si besoin.': 'Auto homing on: the U1 will home by itself when needed.', 'La U1 ne donne pas ses buses (firmware ancien) : ta saisie est utilisée.': 'The U1 doesn’t report its nozzles (old firmware): your input is used.', 'Buses de diamètres différents dans ce fichier : vérifie la proposition.': 'Nozzles of different diameters in this file: check the proposal.', 'Garde-fou activé : séchage et poussée relancés si un ACE se déconnecte.': 'Guard on: drying and feed restarted if an ACE disconnects.', ') : garde une seule copie de multiACE Bridge dans Fichier → Plugins.': '): keep a single copy of multiACE Bridge in File → Plugins.', "Pas de multiACE à %s : vérifie l'adresse (la U1 est-elle allumée ?)": 'No multiACE at %s: check the address (is the U1 on?)', 'Export : Preflight de la U1 exécuté dans Orca, avec vérifications.': 'Export: U1 Preflight run inside Orca, with checks.', "L'étape Preflight sera ajoutée aux profils de traitement de la U1.": 'The Preflight step will be added to the U1 process presets.', 'Vérification : %s. Utilise « Ouvrir dans le Preflight multiACE ».': 'Check: %s. Use “Open in multiACE Preflight”.', "les bobines imposées ne s'appliquent qu'au plan « Comme tranché »": 'forced spools only apply to the “As sliced” plan', 'Associe une bobine pour mémoriser le poids et la calibration PA.': 'Link a spool to store the weight and the PA calibration.', 'Indique une seule fois la buse vissée sur chaque tête de ta U1 :': 'Set once the nozzle fitted on each head of your U1:', 'multiACE : %d filament(s) utilise(s), envoi reserve a %d et plus': 'multiACE: %d filament(s) used, sending is for %d or more', 'multiACE : préparation avec le code multiACE de la U1 pour "%s"': 'multiACE: preparing with the U1’s multiACE code for "%s"', 'tête(s)), par le code multiACE de la U1. Vérifié avant l’envoi.': 'head(s)), by the U1’s multiACE code. Checked before sending.', 'Étape « multiACE : envoyer au Preflight » ajoutée au profil «': 'Step “multiACE : envoyer au Preflight” added to preset “', "cette version de multiACE ne permet pas d'imposer une bobine": 'this multiACE version doesn’t allow forcing a spool', "le fichier préparé n'a pas la marque multiACE : envoi annulé": 'the prepared file lacks the multiACE mark: sending cancelled', "Export : fichier d'origine envoyé au Preflight de multiACE.": 'Export: original file sent to the multiACE Preflight.', '%s a changé (%s) : version de multiACE non prise en charge': '%s changed (%s): multiACE version not supported', 'ACE %d revenu : séchage relancé (%d °C, %d min restantes).': 'ACE %d back: drying restarted (%d °C, %d min left).', 'Masquer le panneau (une notification permet de le rouvrir)': 'Hide the panel (a notification lets you reopen it)', 'Ajouté à la file d’attente : tu peux en ajouter d’autres.': 'Added to the queue: you can add more.', 'En partie lues dans la U1 ; le reste vient de ta saisie :': 'Partly read from the U1; the rest comes from your input:', 'Cliquer pour déplier / replier : couleur, matière, poids': 'Click to unfold / fold: colour, material, weight', 'bobine choisie absente des ACE : recharge la proposition': 'chosen spool not in the ACEs: reload the proposal', 'dans Paramètres › Firmware de la U1 (firmware Extended).': 'in the U1’s Settings › Firmware (Extended firmware).', 'Homing automatique désactivé : le panneau te demandera.': 'Auto homing off: the panel will ask you.', "La U1 termine une opération : l'action suivante attend…": 'The U1 is finishing an operation: the next action waits…', 'ce mode de têtes se règle dans le Preflight de multiACE': 'this head mode is set in the multiACE Preflight', 'une tête est en mode manuel : attribution indisponible': 'a head is in manual mode: assignment unavailable', 'Options (adresse de la U1, homing, garde-fou, export)': 'Options (U1 address, homing, guard, export)', '⚠ Mets ça à gauche (Imprimante → Buse) puis tranche :': '⚠ Set this on the left (Printer → Nozzle) then slice:', 'Le lancement attend que les bobines soient en place.': 'Printing waits until the spools are in place.', 'la U1 imprime : pas de homing pendant une impression': 'the U1 is printing: no homing during a print', 'le fichier utilise une bobine absente : envoi annulé': 'the file uses a missing spool: sending cancelled', 'reponse illisible de %s (multiACE est-il installe ?)': 'unreadable answer from %s (is multiACE installed?)', '%s absent (multiACE trop ancien pour cette méthode)': '%s missing (multiACE too old for this method)', 'Le plugin ne touche plus aux profils de traitement.': 'The plugin no longer touches process presets.', 'Étape Preflight : imprimante active autre que la U1': 'Preflight step: active printer is not the U1', ') : aucune bobine de cette couleur dans les ACE.': '): no spool of this colour in the ACEs.', "Garde-fou : relancer après une déconnexion d'ACE": 'Guard: restart after an ACE disconnect', "Préparer l'export avec le code multiACE de la U1": 'Prepare the export with the U1’s multiACE code', "Fichier d'origine envoyé au Preflight multiACE.": 'Original file sent to the multiACE Preflight.', 'Température et durée : dans le panneau complet.': 'Temperature and duration: in the full panel.', 'échange multiACE en cours depuis plus de 10 min': 'multiACE swap running for more than 10 min', '. Le plugin affiche et applique, la U1 décide.': '. The plugin shows and applies, the U1 decides.', "Ajouter l'étape Preflight aux profils de la U1": 'Add the Preflight step to the U1 presets', 'Mets une bobine dans ce slot pour l’utiliser.': 'Put a spool in this slot to use it.', '» : enregistre-le (disquette) pour la garder.': '”: save it (disk icon) to keep it.', 'ACE %d : relance du séchage impossible (%s).': 'ACE %d: drying restart failed (%s).', 'Caméra de la U1 : masquée / en haut / en bas': 'U1 camera: hidden / top / bottom', 'Pas encore de PA mémorisé pour cette bobine.': 'No PA stored for this spool yet.', 'T%d : relance de la poussée impossible (%s).': 'T%d: feed restart failed (%s).', 'multiACE : lecture du G-code impossible (%s)': 'multiACE: cannot read the G-code (%s)', 'Les bobines sont en place : tu peux lancer.': 'The spools are in place: you can print.', 'Préparation avec le code multiACE de la U1…': 'Preparing with the U1’s multiACE code…', 'code de la U1 impossible à enregistrer (%s)': 'cannot save the U1 code (%s)', 'filament(s) au-delà du 4e : non vérifié(s).': 'filament(s) beyond the 4th: not checked.', 'multiACE : "%s" envoye au Preflight de %s%s': 'multiACE: "%s" sent to the Preflight of %s%s', ': échanges de bobine pendant l’impression.': ': spool swaps during the print.', 'dossier de stockage du plugin indisponible': 'plugin storage folder unavailable', 'envoyé à multiACE, ouverture du Preflight…': 'sent to multiACE, opening the Preflight…', 'Écran de la U1 : masqué / en haut / en bas': 'U1 screen: hidden / top / bottom', 'Calcul fait par le code multiACE de ta U1': 'Computed by your U1’s multiACE code', 'Dernier export préparé par cette copie (v': 'Last export prepared by this copy (v', 'Poussée revenue sur T%d (ACE %d slot %d).': 'Feed back on T%d (ACE %d slot %d).', 'Une action est en cours : attends sa fin.': 'An action is running: wait for it to finish.', 'réponse inattendue de /preflight/livedata': 'unexpected answer from /preflight/livedata', 'T%d : poussée relancée (ACE %d slot %d).': 'T%d: feed restarted (ACE %d slot %d).', 'Température du plateau pendant la mesure': 'Bed temperature during probing', 'televersement vers la U1 impossible (%s)': 'upload to the U1 failed (%s)', '✓ buses d’OrcaSlicer OK pour tes bobines': '✓ OrcaSlicer nozzles OK for your spools', 'Déplacement doux vers la ligne d’amorce': 'Soft travel to the purge line', 'appliquer couleur / matière à la bobine': 'apply colour / material to the spool', 'la U1 ne fournit pas son Preflight (%s)': 'the U1 doesn’t serve its Preflight (%s)', 'le code de la U1 ne se charge pas (%s)': 'the U1 code doesn’t load (%s)', 'réponse inattendue de /preflight/pysrc': 'unexpected answer from /preflight/pysrc', 'Mesurées au départ (têtes chargées) :': 'Measured at start (loaded heads):', 'multiACE : renvoyer le dernier G-code': 'multiACE: resend the last G-code', '⚠ Le dernier export est passé par une': '⚠ The last export went through', 'Calibration du filament (PA) sur T%s': 'Filament (PA) calibration on T%s', 'Ouverture du panneau impossible : %s': 'Cannot open the panel: %s', 'Étape Preflight : ajout impossible (': 'Preflight step: cannot add it (', 'Caméra indisponible pour le moment.': 'Camera unavailable for now.', 'Modifier couleur / matière / poids…': 'Edit colour / material / weight…', 'le Preflight de la U1 a échoué (%s)': 'the U1 Preflight failed (%s)', "Aucun G-code garde pour l'instant.": 'No G-code kept yet.', 'Calibration du flux (PA) au départ': 'Flow (PA) calibration at start', 'J’ai placé les bobines : recharger': 'I placed the spools: reload', 'Reprise de la file (%d action(s)).': 'Queue resumed (%d action(s)).', '⚠ Buses à régler dans OrcaSlicer :': '⚠ Nozzles to set in OrcaSlicer:', 'Ouvrir dans le Preflight multiACE': 'Open in multiACE Preflight', '· arrive en cours d’impression (T': '· arrives during the print (T', '✓ Étape Preflight présente dans «': '✓ Preflight step present in “', '(aucune bobine associée au slot)': '(no spool linked to the slot)', 'Déchargement de toutes les têtes': 'Unloading all heads', 'Homing automatique si nécessaire': 'Auto homing when needed', 'multiACE : pas de fichier G-code': 'multiACE: no G-code file', '"%s" envoye au Preflight de %s.': '"%s" sent to the Preflight of %s.', 'Chargement T%s ← ACE %s slot %s': 'Loading T%s ← ACE %s slot %s', 'Calibration du plateau (%s °C)': 'Bed calibration (%s °C)', 'Faire le homing puis reprendre': 'Home then resume', "la U1 n'a pas répondu à temps.": 'the U1 didn’t answer in time.', ': aucune bobine dans les ACE.': ': no spool in the ACEs.', 'Bobine absente des ACE pour :': 'Spool missing from the ACEs for:', 'Envoyer sur la U1 sans lancer': 'Send to the U1 without printing', 'Toujours en cours sur la U1 :': 'Still running on the U1:', 'Une action est deja en cours.': 'An action is already running.', 'multiACE - Preflight de la U1': 'multiACE - U1 Preflight', 'occupée depuis plus de 10 min': 'busy for more than 10 min', 'Adresse de la U1 introuvable': 'U1 address not found', 'Impression lancée avec %s.%s': 'Print started with %s.%s', 'Rien à faire sur cette tête.': 'Nothing to do on this head.', 'tête(s) chargée(s) au départ': 'head(s) loaded at start', 'Échange T%s ← ACE %s slot %s': 'Swap T%s ← ACE %s slot %s', 'Étape Preflight absente de «': 'Preflight step missing from “', '(méthode de multiACE 1.27b)': '(multiACE 1.27b method)', "Modifier l'adresse de la U1": 'Change the U1 address', 'même matière, autre couleur': 'same material, other colour', 'Écran distant indisponible.': 'Remote screen unavailable.', 'Étape Preflight ajoutée à «': 'Preflight step added to “', '✓ Buses OK pour tes bobines': '✓ Nozzles OK for your spools', '(disquette) pour la garder': '(disk icon) to keep it', 'Calibrer cette bobine (PA)': 'Calibrate this spool (PA)', 'Séchage ACE %s (%s °C, %s)': 'Drying ACE %s (%s °C, %s)', 'seulement la zone imprimée': 'printed area only', 'Commande envoyée à la U1…': 'Command sent to the U1…', 'Matière absente des ACE :': 'Material missing from the ACEs:', 'Pose de côté la bobine de': 'Set aside the spool from', 'Revenir au choix de la U1': 'Back to the U1’s choice', 'choix de bobine illisible': 'unreadable spool choice', 'code de la U1 non reconnu': 'U1 code not recognised', 'Panneau multiACE masqué.': 'multiACE panel hidden.', 'échanges de bobine (ACE)': 'spool swaps (ACE)', ': tranché pour une buse': ': sliced for nozzle', 'Arrêt du séchage ACE %s': 'Stop drying ACE %s', 'code de la U1 illisible': 'unreadable U1 code', 'code de la U1 trop gros': 'U1 code too large', 'et tes bobines imposées': 'and your forced spools', 'Calibration du plateau': 'Bed calibration', 'Comme tranché (slicer)': 'As sliced (slicer)', 'la U1 est occupée (%s)': 'the U1 is busy (%s)', '— avant la mise à jour': '— before the update', 'Adresse enregistrée :': 'Address saved:', 'Connexion à multiACE…': 'Connecting to multiACE…', 'La U1 ne répond pas à': 'The U1 doesn’t answer at', 'Ma U1 (buses vissées)': 'My U1 (fitted nozzles)', 'couleur(s) du fichier': 'colour(s) in the file', ": vérifie l'adresse.": ': check the address.', 'Garde-fou désactivé.': 'Guard off.', 'disposition proposée': 'proposed layout', 'enregistre le profil': 'save the preset', 'fichier préparé vide': 'prepared file empty', '(clic pour changer)': '(click to change)', 'Détail par filament': 'Per-filament detail', 'Lancer l’impression': 'Start the print', 'Optimisé (optimize)': 'Optimized (optimize)', 'Relancer le séchage': 'Restart drying', 'changements d’outil': 'tool changes', 'même nom de couleur': 'same colour name', 'Étape Preflight : …': 'Preflight step: …', 'ACE %d déconnecté.': 'ACE %d disconnected.', 'Adresse de la U1 :': 'U1 address:', 'Arrêter le séchage': 'Stop drying', 'Fermer les options': 'Close options', 'Réduire / agrandir': 'Collapse / expand', 'homing refusé : %s': 'homing refused: %s', 'matière différente': 'different material', 'pas de PA mémorisé': 'no stored PA', 'sur la même tête T': 'on the same head T', '+ Nouvelle bobine': '+ New spool', 'Ajoutée à la file': 'Added to the queue', 'Aucune (détacher)': 'None (detach)', 'Caméra de la U1 :': 'U1 camera:', 'Envoi annulé : %s': 'Sending cancelled: %s', 'Forcer une bobine': 'Force a spool', 'Lues dans la U1 :': 'Read from the U1:', 'Time-lapse caméra': 'Camera time-lapse', 'Têtes déjà vides.': 'Heads already empty.', '· avant tes choix': '· before your choices', '· lues dans la U1': '· read from the U1', '(choix de la U1)': '(U1’s choice)', '. Rien à saisir.': '. Nothing to enter.', 'Déchargement T%s': 'Unloading T%s', 'Séchage relancé…': 'Drying restarted…', 'le plan « %s »%s': 'the “%s” plan%s', 'pas dans les ACE': 'not in the ACEs', 'Écran de la U1 :': 'U1 screen:', 'échange en cours': 'swap in progress', '(aucune bobine)': '(no spool)', ', imprimé sur T': ', printed on T', 'Déjà en place :': 'Already in place:', 'Homing terminé.': 'Homing done.', 'Revenir au RFID': 'Back to RFID', 'Très haut débit': 'Ultra high flow', 'après la file :': 'after the queue:', 'bobine partagée': 'shared spool', 'Calibrer avant': 'Calibrate before', 'Dans l’ordre :': 'In order:', 'E3D haut débit': 'E3D high flow', 'File d’attente': 'Queue', 'TPU haut débit': 'TPU high flow', 'Tout décharger': 'Unload all', 'non renseignée': 'not set', 'tranché pour T': 'sliced for T', 'PA mémorisé :': 'Stored PA:', 'Vider la file': 'Clear the queue', 'aucune bobine': 'no spool', 'cette adresse': 'this address', 'choix manuel': 'manual choice', 'du plugin (v': 'of the plugin (v', 'déchargement': 'unloading', 'en déplaçant': 'by moving', 'pas utilisée': 'unused', 'sans adresse': 'no address', 'sans capteur': 'no sensor', 'à mettre ici': 'to move here', 'Décharger T': 'Unload T', 'Déjà vide :': 'Already empty:', 'Enregistrer': 'Save', 'PA mémorisé': 'Stored PA', 'Bleu clair': 'Light blue', 'Bleu foncé': 'Dark blue', 'Cyan clair': 'Light cyan', 'Gris clair': 'Light grey', 'Gris foncé': 'Dark grey', 'Haut débit': 'High flow', 'Vert clair': 'Light green', 'Vert foncé': 'Dark green', 'au lieu de': 'instead of', 'déconnecté': 'disconnected', 'haut débit': 'high flow', 'm utilisés': 'm used', 'ont changé': 'changed', 'prévue sur': 'planned on', '· à régler': '· to set', 'Échec : %s': 'Failed: %s', 'échange(s)': 'swap(s)', 'Décharger': 'Unload', 'Recharger': 'Reload', 'Terminé :': 'Done:', 'Turquoise': 'Turquoise', 'bobine(s)': 'spool(s)', 'matière ≠': 'material ≠', '🔥 Séchage': '🔥 Drying', ', puis :': ', then:', 'Bordeaux': 'Burgundy', 'Modifier': 'Edit', 'Échanger': 'Swap', 'à mettre': 'to move', 'Annuler': 'Cancel', 'Arrêter': 'Stop', 'Charger': 'Load', 'Lavande': 'Lavender', 'Matière': 'Material', 'Réduire': 'Collapse', 'chargée': 'loaded', 'libérée': 'freed', 'masquée': 'hidden', '· reste': '· left', 'Fermer': 'Close', 'Lancer': 'Start', 'Marron': 'Brown', 'Plan «': 'Plan “', 'Sécher': 'Dry', 'Violet': 'Purple', 'aucune': 'none', 'déduit': 'deduced', 'masqué': 'hidden', '· slot': '· slot', 'Blanc': 'White', 'Crème': 'Cream', 'Jaune': 'Yellow', 'Pêche': 'Peach', 'Rouge': 'Red', 'Têtes': 'Heads', 'prête': 'ready', '· sur': '· on', 'échec': 'failed', 'Bleu': 'Blue', 'Gris': 'Grey', 'Kaki': 'Khaki', 'Noir': 'Black', 'Rose': 'Pink', 'Vert': 'Green', 'vide': 'empty'}
+
+_I18N_EN.update({   # 0.37.0
+    "Mettre dans la file multiACE": "Put in the multiACE queue",
+    "File d’impression de multiACE (Print Hub) : tu lances depuis multiACE quand tu veux": "multiACE print queue (Print Hub): start it from multiACE whenever you want",
+    "C’est fait": "Done",
+    "✓ noté": "✓ noted",
+    "Après l’avoir posée : sa couleur, sa matière et sa bobine de la table multiACE suivent dans le nouveau slot (une bobine RFID se relit seule)": "Once placed: its colour, material and multiACE table spool follow into the new slot (an RFID spool is read again by itself)",
+    "%s ajouté à la file multiACE (%s) : lance-le depuis multiACE → Print Hub ; la U1 revérifie les bobines au lancement.%s": "%s added to the multiACE queue (%s): start it from multiACE → Print Hub; the U1 checks the spools again at start.%s",
+    "Bobine notée dans ACE %d · slot %d.": "Spool noted in ACE %d · slot %d.",
+    "Bobine de ACE %d · slot %d inconnue : « Recharger ».": "Spool of ACE %d · slot %d unknown: “Reload”.",
+    "ACE %d · slot %d est vide : pose d'abord la bobine": "ACE %d · slot %d is empty: place the spool first",
+    "couleur de la bobine illisible": "unreadable spool colour",
+    "la U1 imprime": "the U1 is printing",
+    "dossier invalide": "invalid folder",
+    "chemin non calibré": "path not calibrated",
+    "Calibre ce chemin dans multiACE : Config → Calibration (le plugin ne le fait pas)": "Calibrate this path in multiACE: Config → Calibration (the plugin doesn’t do it)",
+    "Filaments 5 et plus (outils virtuels multiACE)": "Filaments 5 and up (multiACE virtual tools)",
+    "Table « Slicer filament → MMU / Slot » de multiACE (Config). Elle sert quand le fichier est imprimé tel quel ; avec le Preflight, la U1 réattribue par couleur.": "multiACE “Slicer filament → MMU / Slot” table (Config). It applies when the file is printed as is; with the Preflight, the U1 reassigns by colour.",
+    " filament(s) au-delà du 4e : bobine différente dans leur slot multiACE (voir « Filaments 5 et plus »).": " filament(s) beyond the 4th: different spool in their multiACE slot (see “Filaments 5 and up”).",
+    "⚠ slot vide": "⚠ empty slot",
+    "⚠ bobine": "⚠ spool",
+    " absent": " missing",
+    "(table)": "(table)",
+    "(Orca : ": "(Orca: ",
+    " · en déplaçant des bobines": " · by moving spools",
+})
+
+
+def system_lang():
+    """Langue de Windows (ou de l'environnement) : "fr" ou "en"."""
+    try:
+        import ctypes
+        lid = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+        return "fr" if (lid & 0x3FF) == 0x0C else "en"
+    except Exception:
+        pass
+    for k in ("LC_ALL", "LC_MESSAGES", "LANG", "LANGUAGE"):
+        v = os.environ.get(k) or ""
+        if v and not v.upper().startswith(("C.", "C:", "POSIX")) and v.upper() not in ("C",):
+            return "fr" if v.lower().startswith("fr") else "en"
+    return "fr"
+
+
+_LANG = {"v": None}
+
+
+def ui_lang():
+    if _LANG["v"] is None:
+        want = load_settings().get("lang", "auto")
+        _LANG["v"] = system_lang() if want == "auto" else want
+    return _LANG["v"]
+
+
+def _js_escape(text):
+    return re.sub(r"([.*+?^${}()|\[\]\\/])", r"\\\1", text)
+
+
+def _rule_source(fr, en, esc=re.escape):
+    """Fragment francais -> (motif, remplacement) ; %s / %d deviennent des groupes."""
+    parts = re.split(r"(%s|%d)", fr)
+    pat, n = "", 0
+    for i, part in enumerate(parts):
+        if part in ("%s", "%d"):
+            last = i == len(parts) - 1 or (i == len(parts) - 2 and parts[-1] == "")
+            pat += r"(\d+)" if part == "%d" else ("(.+)" if last else "(.+?)")
+            n += 1
+        else:
+            pat += esc(part)
+    if re.match(r"\w\w", fr):            # pas de garde apres un prefixe d'une lettre (« T », « v »)
+        pat = r"(?<![\w])" + pat
+    if re.search(r"\w\w$", fr):
+        pat += r"(?![\w])"
+    k = [0]
+
+    def sub(m):
+        k[0] += 1
+        return "\\%d" % k[0]
+    rep = re.sub(r"%s|%d", sub, en.replace("\\", "\\\\"))
+    return pat, rep, n
+
+
+_I18N_EN = dict(sorted(_I18N_EN.items(), key=lambda kv: -len(kv[0])))   # le plus long d'abord
+_I18N_RULES = []
+
+
+def tr(text):
+    """Texte affiche dans OrcaSlicer (notifications, resultats, titres) dans la langue choisie."""
+    if not isinstance(text, str) or not text or ui_lang() != "en":
+        return text
+    if not _I18N_RULES:
+        for fr, en in _I18N_EN.items():
+            pat, rep, _n = _rule_source(fr, en)
+            _I18N_RULES.append((re.compile(pat), rep))
+    for rx, rep in _I18N_RULES:
+        if rx.search(text):
+            text = rx.sub(rep, text)
+    return re.sub(r"\s+”", "”", re.sub(r"“\s+", "“", text))
+
+
+def _js_rules():
+    out = []
+    for fr, en in _I18N_EN.items():
+        pat, rep, _n = _rule_source(fr, en, _js_escape)
+        pat = pat.replace(r"(?<![\w])", r"(?<![\p{L}\p{N}_])").replace(r"(?![\w])", r"(?![\p{L}\p{N}_])")
+        rep = re.sub(r"\\(\d)", r"$\1", rep.replace("$", "$$")).replace("\\\\", "\\")
+        out.append([pat, rep])
+    return out
+
+
+_I18N_JS = r"""<script>(function(){
+var R=__RULES__.map(function(r){try{return [new RegExp(r[0],"gu"),r[1]]}catch(e){return null}}).filter(Boolean),C=new Map();
+function T(s){if(!s||!/[A-Za-zÀ-ÿ]/.test(s))return s;var c=C.get(s);if(c!==undefined)return c;var o=s;
+  for(var i=0;i<R.length;i++){R[i][0].lastIndex=0;if(R[i][0].test(o)){R[i][0].lastIndex=0;o=o.replace(R[i][0],R[i][1])}}
+  o=o.replace(/“\s+/g,"“").replace(/\s+”/g,"”");if(C.size>5000)C.clear();C.set(s,o);return o}
+var AT=["title","placeholder","alt","aria-label"],busy=false;
+function walk(n){if(n.nodeType===3){var p=n.parentNode;if(p&&/^(SCRIPT|STYLE|TEXTAREA)$/.test(p.nodeName))return;var t=T(n.nodeValue);if(t!==n.nodeValue)n.nodeValue=t;return}
+  if(n.nodeType!==1||/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.nodeName))return;
+  for(var i=0;i<AT.length;i++){var v=n.getAttribute&&n.getAttribute(AT[i]);if(v){var w=T(v);if(w!==v)n.setAttribute(AT[i],w)}}
+  for(var c=n.firstChild;c;c=c.nextSibling)walk(c)}
+function run(){if(busy)return;busy=true;try{walk(document.documentElement);document.title=T(document.title)}finally{busy=false}}
+window.__i18nT=T;
+var mo=new MutationObserver(function(ms){if(busy)return;busy=true;try{ms.forEach(function(m){if(m.type==="characterData")walk(m.target);else if(m.type==="attributes")walk(m.target);else m.addedNodes.forEach(walk)})}finally{busy=false}});
+function start(){run();mo.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:AT})}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();
+})();</script>"""
+
+
+def i18n_page(html):
+    """Ajoute la traduction a une page HTML si l'interface est en anglais."""
+    if ui_lang() != "en":
+        return html
+    js = _I18N_JS.replace("__RULES__", json.dumps(_js_rules(), ensure_ascii=False).replace("</", "<\\/"))
+    html = html.replace('<html lang="fr">', '<html lang="en">', 1)
+    i = html.find("<head>")
+    if i < 0:
+        m = re.search(r"<head[^>]*>", html)
+        i = m.end() if m else 0
+    else:
+        i += len("<head>")
+    return html[:i] + js + html[i:]
+
+
+def _ok(*a):
+    return orca.ExecutionResult.success(*[tr(x) if isinstance(x, str) else x for x in a])
+
+
+def _fail(*a):
+    return orca.ExecutionResult.failure(*[tr(x) if isinstance(x, str) else x for x in a])
+
+
+def _skip(*a):
+    return orca.ExecutionResult.skipped(*[tr(x) if isinstance(x, str) else x for x in a])
+
+
+def _notify(ui, level, text, *rest):
+    return ui.push_notification(level, tr(text), *[tr(x) if isinstance(x, str) else x for x in rest])
 
 def save_settings(settings):
     write_json_atomic(_settings_path(), settings)
@@ -334,8 +498,32 @@ class MultiAce:
         except ValueError:
             raise MultiAceError("reponse illisible de %s (multiACE est-il installe ?)" % path)
 
+    def post_json(self, path, value, timeout=TIMEOUT_BG):
+        body = json.dumps(value).encode("utf-8")
+        with self._open("POST", path, data=body, headers={"Content-Type": "application/json"},
+                        timeout=timeout) as resp:
+            raw = resp.read()
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except ValueError:
+            return {}
+
+    def delete_printer_file(self, rel_path, timeout=TIMEOUT_BG):
+        """Supprime un fichier de la liste de la U1 (Moonraker), meilleur effort."""
+        url = origin_of(self.host) + "/server/files/gcodes/" + urllib.parse.quote(rel_path)
+        try:
+            with _OPENER.open(urllib.request.Request(url, method="DELETE"), timeout=timeout) as resp:
+                resp.read()
+        except Exception:
+            pass
+
     def state(self, timeout=TIMEOUT_BG):
-        return self.get_json("/state", timeout)
+        st = self.get_json("/state", timeout)
+        # multiACE 1.90 : {"klippy": "disconnected"} pendant un redemarrage de Klipper, {"error": ...} si
+        # Moonraker ne repond pas. Ce n'est pas un etat des ACE : ne rien en conclure (garde-fou, panneau).
+        if isinstance(st, dict) and "aces" not in st and (st.get("klippy") or st.get("error")):
+            raise MultiAceError("Klipper n'est pas prêt sur la U1 (redémarrage ou erreur en cours) : attends puis réessaie.")
+        return st
 
     def inbox(self, timeout=TIMEOUT_BG):
         return self.get_json("/preflight/inbox", timeout)
@@ -424,8 +612,9 @@ class MultiAce:
         """Televerse dans la liste des fichiers de la U1 (Moonraker, via nginx) sans lancer l'impression."""
         return self.send_gcode(path, name, endpoint="moonraker")
 
-    def send_gcode(self, path, name, endpoint="/preflight/inbox"):
-        """POST multipart en flux (les G-code multi-couleurs depassent souvent 100 Mo)."""
+    def send_gcode(self, path, name, endpoint="/preflight/inbox", folder=None):
+        """POST multipart en flux (les G-code multi-couleurs depassent souvent 100 Mo).
+        folder : sous-dossier de la liste des fichiers (Moonraker seulement, ex. la file multiACE)."""
         name = os.path.basename(name or path)
         if not re.search(r"\.(gcode|gco|g)$", name, re.IGNORECASE):
             name += ".gcode"
@@ -434,6 +623,11 @@ class MultiAce:
         head = ("--%s\r\nContent-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n"
                 "Content-Type: application/octet-stream\r\n\r\n" % (boundary, safe)).encode("utf-8")
         if endpoint == "moonraker":
+            if folder:
+                if not re.fullmatch(r"[A-Za-z0-9_\-]{1,40}", folder):
+                    raise MultiAceError("dossier invalide")
+                head = ("--%s\r\nContent-Disposition: form-data; name=\"path\"\r\n\r\n%s\r\n"
+                        % (boundary, folder)).encode("ascii") + head
             head = ("--%s\r\nContent-Disposition: form-data; name=\"root\"\r\n\r\ngcodes\r\n" % boundary).encode("ascii") + head
         tail = ("\r\n--%s--\r\n" % boundary).encode("ascii")
         size = os.path.getsize(path)
@@ -594,7 +788,7 @@ class MultiAcePage(orca.pages.PagesPluginCapabilityBase):
         return {}
 
     def get_ui(self):
-        return PAGE
+        return i18n_page(PAGE)
 
     # Appele sur le fil de l'interface.
     def on_message(self, data):
@@ -690,7 +884,7 @@ class PreflightPopup:
                 pass
         html = (POPUP.replace("__URL__", url.replace("\\", "").replace('"', ""))
                      .replace("__NAME__", name.replace("<", "").replace(">", "").replace("&", "et")))
-        self.window = orca.host.ui.create_window(html=html, title="multiACE - Preflight", width=1180, height=820,
+        self.window = orca.host.ui.create_window(html=i18n_page(html), title="multiACE - Preflight", width=1180, height=820,
                                                  on_close=self._closed)
 
     def _closed(self):
@@ -846,8 +1040,51 @@ def slicing_advice(state, real, colours, orca_nozzles):
         rows.append(row)
     todo = [{"t": r["t"], "need": r["need"]} for r in rows if r["found"] and r.get("need") and not r["ok"]]
     shared = [{"head": h, "filaments": ts} for h, ts in sorted(used_heads.items()) if len(ts) > 1]
+    virtual = virtual_tool_rows(state, real, colours, orca_nozzles)
     return {"rows": rows, "todo": todo, "shared": shared, "real_known": all(real[:4]) if real else False,
-            "extra": max(0, len(colours) - 4)}
+            "virtual": virtual, "extra": 0 if virtual is not None else max(0, len(colours) - 4)}
+
+
+VIRTUAL_TOOL_MAX = 31      # multiACE : outils T4..T31 (filaments 5 a 32)
+
+
+def virtual_tool_rows(state, real, colours, orca_nozzles):
+    """Filaments 5 et plus (multiACE 1.90, « outils virtuels ») : la table « Slicer filament → MMU / Slot »
+    de multiACE (tool_map, sinon sa formule ace=(n-4)//4, slot=(n-4)%4). Lecture seule : montre ou part
+    chaque filament quand le fichier est imprime tel quel, et si la bobine de ce slot a la bonne couleur.
+    None : multiACE sans outils virtuels (1.27b) ou projet de 4 filaments au plus."""
+    if not isinstance(state, dict) or not isinstance(state.get("tool_map"), dict) or len(colours) <= 4:
+        return None
+    tmap, mode = state["tool_map"], state.get("mode")
+    aces = {a.get("idx"): a for a in state.get("aces") or [] if isinstance(a.get("idx"), int)}
+    head_ace = state.get("head_ace") or {}
+    out = []
+    for i, colour in enumerate(colours[4:VIRTUAL_TOOL_MAX + 1], start=4):
+        ent = tmap.get(str(i))
+        if isinstance(ent, (list, tuple)) and len(ent) == 2 and all(isinstance(v, int) for v in ent):
+            ace, slot, mapped = ent[0], ent[1], True
+        else:
+            (ace, slot), mapped = divmod(i - 4, 4), False
+        if mode == "head":
+            head = next((int(h) for h, a in head_ace.items() if str(h).isdigit() and _int_or_none(a) == ace), None)
+        else:
+            head = slot if 0 <= slot <= 3 else None
+        row = {"t": i, "color": _norm_colour(colour), "ace": ace, "slot": slot, "mapped": mapped, "head": head,
+               "present": ace in aces}
+        a = aces.get(ace) or {}
+        sl = next((s for s in a.get("slots") or [] if s.get("idx") == slot), None)
+        empty = sl is None or sl.get("state") == "empty" or sl.get("source") == "empty"
+        row["empty"] = empty
+        if not empty:
+            row["spool_color"] = _norm_colour(sl.get("color"))
+            row["material"] = (sl.get("material") or "").strip()
+            want, got = _rgb(colour), _rgb(sl.get("color"))
+            row["match"] = bool(want and got and sum((x - y) ** 2 for x, y in zip(want, got)) ** 0.5 <= PREP_MAX_DIST)
+        need = real[head] if head is not None and head < len(real) else ""
+        now = orca_nozzles[i] if i < len(orca_nozzles) else None
+        row.update(need=need or None, now=now, ok=bool(need) and (now is None or need == now))
+        out.append(row)
+    return out
 
 
 _NOZZLE_CACHE = {}         # hote -> (instant, buses lues dans la U1)
@@ -868,6 +1105,46 @@ def effective_nozzles(client):
     real = [read[h] or manual[h] for h in range(4)]
     src = "u1" if all(read) else ("mixte" if any(read) else "manuel")
     return real, src
+
+
+_CALIB_CACHE = {}          # hote -> (instant, {"ace_slot": True/False})
+CALIB_CACHE_S = 60.0
+
+
+def _cfg_positive(params, key):
+    try:
+        return float(str(params.get(key, "")).split("#")[0].strip()) > 0
+    except ValueError:
+        return False
+
+
+def path_calibration(client, force=False):
+    """Calibration du chemin (Bowden) de chaque slot, comme l'onglet Config → Calibration de multiACE :
+    un chemin est calibre quand retract_length ET swap_retract_length sont enregistres pour ce slot
+    ([ace N] retract_length_S) ou pour son ACE ([ace N] retract_length) — jamais la valeur globale de [ace].
+    Lecture seule (GET /api/config), gardee 60 s. Retourne {"ace_slot": bool} ou None si illisible."""
+    now = time.monotonic()
+    hit = _CALIB_CACHE.get(client.host)
+    if hit and not force and now - hit[0] < CALIB_CACHE_S:
+        return hit[1]
+    try:
+        cfg = client.get_json("/config", timeout=TIMEOUT_UI)
+        per = cfg.get("per_ace_params") if isinstance(cfg, dict) else None
+        if not isinstance(per, dict):
+            raise ValueError
+    except Exception:
+        _CALIB_CACHE[client.host] = (now, None)
+        return None
+    out = {}
+    for ace in range(8):
+        p = per.get(str(ace)) or per.get(ace) or {}
+        if not isinstance(p, dict):
+            p = {}
+        for slot in range(4):
+            out["%d_%d" % (ace, slot)] = all(_cfg_positive(p, "%s_%d" % (k, slot)) or _cfg_positive(p, k)
+                                             for k in ("retract_length", "swap_retract_length"))
+    _CALIB_CACHE[client.host] = (now, out)
+    return out
 
 
 def orca_filament_setup():
@@ -1072,6 +1349,13 @@ def _signature(live):
     return json.dumps([live.get("live_slots"), live.get("head_ctx")], sort_keys=True)
 
 
+def _params(fn):
+    try:
+        return set(inspect.signature(fn).parameters)
+    except (TypeError, ValueError):
+        return set()
+
+
 def u1_report(client, path, name):
     pp, core, sha = u1_code(client)
     live = _live(client)
@@ -1082,6 +1366,17 @@ def u1_report(client, path, name):
         colors, types, naces, _used, plan, meta = core.parse_meta(pp, _read_lines(path))
         header = None
     extra = {"header_text": header, "cost_params": live.get("cost_params") or {}} if caps.get("cost") else {}
+    # multiACE 1.90 : « Optimisé » / « Par couche » ne travaillent qu'avec les bobines deja chargees. Le
+    # meme code de la U1 sait encore proposer une disposition (build_one_plan sans live_slots : « loadout
+    # suggestion »). On garde les arguments de son propre appel pour lui redemander cette proposition
+    # quand le plan est impossible avec les bobines en place. Aucune logique d'attribution ici.
+    calls, orig = {}, getattr(core, "build_one_plan", None)
+    if callable(orig) and "live_slots" in _params(orig):
+        def spy(*a, **k):
+            if len(a) > 1 and a[1] in ("optimize", "layer"):
+                calls[a[1]] = (a, dict(k))
+            return orig(*a, **k)
+        core.build_one_plan = spy
     try:
         report = core.build_report(pp, slicer_colors=colors, slicer_types=types, num_aces=naces, plan_proxy=plan,
                                    live_slots=live["live_slots"], head_ctx=live.get("head_ctx") or {"mode": "multi"},
@@ -1090,7 +1385,23 @@ def u1_report(client, path, name):
         if type(e).__name__ == "PreflightRejected":
             raise MultiAceError(str(e))
         raise U1CodeError("le Preflight de la U1 a échoué (%s)" % str(e)[:160])
+    finally:
+        if callable(orig):
+            core.build_one_plan = orig
     plans = report.get("plans") if isinstance(report, dict) else None
+    if isinstance(plans, dict):
+        for k, (a, kw) in calls.items():
+            cur = plans.get(k) or {}
+            if cur.get("feasible") or "loaded spools" not in str(cur.get("reason") or ""):
+                continue
+            try:
+                sug = orig(*a, **dict(kw, live_slots=None))
+            except Exception:
+                continue
+            if isinstance(sug, dict) and sug.get("feasible"):
+                sug["suggested"] = True                # disposition a faire a la main (tier « planned »)
+                sug["live_reason"] = cur.get("reason")
+                plans[k] = sug
     if not isinstance(plans, dict) or not any(isinstance(p, dict) and p.get("feasible") for p in plans.values()):
         raise U1CodeError("ce mode de têtes se règle dans le Preflight de multiACE")
     report["_prefs_ok"] = bool(caps.get("prefs"))
@@ -1169,7 +1480,15 @@ def autoload_heads(path):
     return sorted({int(h) for h in re.findall(r"^ACE_(?:SWAP|LOAD)_HEAD HEAD=(\d)", m.group(0), re.M)})
 
 
-def placement_todo(report, plan_name):
+def used_filaments(info):
+    """Filaments vraiment imprimes (grammes > 0 ou outil appele dans le G-code) ; None si inconnu."""
+    grams, order = (info or {}).get("grams") or [], (info or {}).get("order") or []
+    if not grams and not order:
+        return None
+    return {t for t, g in enumerate(grams) if g > 0} | set(order)
+
+
+def placement_todo(report, plan_name, used=None):
     """Plans « optimize » / « layer » de multiACE 1.27b : une disposition PROPOSEE (tier « planned »),
     pas les bobines chargees. Liste des filaments dont la bobine (celle que la U1 associe a la couleur
     dans le plan « slicer ») n'est pas encore a la place proposee. Vide = pret a imprimer."""
@@ -1180,6 +1499,8 @@ def placement_todo(report, plan_name):
     src = {m.get("t"): m.get("slot") for m in (plans.get("slicer") or {}).get("mapping") or []}
     todo = []
     for m in rows:
+        if used is not None and m.get("t") not in used:
+            continue
         tgt, have = m.get("slot") or {}, src.get(m.get("t")) or {}
         if not have or (have.get("ace"), have.get("slot")) != (tgt.get("ace"), tgt.get("slot")):
             todo.append(m.get("t"))
@@ -1336,7 +1657,19 @@ def load_info(client):
         dia = "%g" % float(dia)
     except ValueError:
         pass
-    return {"slots": slots, "real": real, "real_src": src, "dia": dia}
+    ident = {}
+    for x in all_slots_from_state(state):
+        if isinstance(x.get("slot"), int):
+            k = "%d_%d" % (x["ace"], x["slot"])
+            sp = binding.get(k)
+            ident[k] = {"material": x["material"], "brand": x["brand"], "color": x["color"], "source": x["source"],
+                        "subtype": "", "spool": str(sp) if sp is not None else None}
+    for a in state.get("aces") or []:
+        for sl in a.get("slots") or []:
+            k = "%s_%s" % (a.get("idx"), sl.get("idx"))
+            if k in ident:
+                ident[k]["subtype"] = sl.get("subtype") or ""
+    return {"slots": slots, "real": real, "real_src": src, "dia": dia, "ident": ident}
 
 
 def forced_remap(report, forced, live_slots):
@@ -1594,7 +1927,7 @@ table.grid td.mv{background:rgba(66,133,244,.14)}.tag.mv{background:rgba(66,133,
 <script>
 var D=__DATA__;
 (function(){
-var S={sel:null,forced:{},flow:null,busy:false,msg:null,open:null};
+var S={sel:null,forced:{},flow:null,busy:false,msg:null,open:null,done:{}};
 function esc(x){var d=document.createElement("span");d.textContent=x==null?"":String(x);return d.innerHTML}
 function col(c){var m=/^#?([0-9a-fA-F]{6})/.exec(String(c||"").trim());return m?"#"+m[1]:"#777"}
 function post(m){try{window.orca.postMessage(m)}catch(e){try{window.chrome.webview.postMessage(m)}catch(_){}}}
@@ -1627,17 +1960,25 @@ function realOf(h){var r=L().real||[];return h!=null&&h>=0&&h<4?(r[h]||""):""}
 function vt(n){return n==="Haut débit"?"high_flow":n==="Standard"?"standard":""}
 function grams(s){var x=L().slots[s.ace+"_"+s.slot];return x&&x.grams>0?' · ≈ '+Math.round(x.grams)+' g':''}
 function forcedOn(){return Object.keys(S.forced).length>0}
+var REASON={"loaded spools do not fit this layout":"impossible avec les bobines chargées","no feasible head assignment":"aucune répartition possible sur les têtes",
+  "no layer-feasible head assignment":"aucune répartition par couche possible","no layer-feasible loadout":"aucune disposition par couche possible",
+  ">4 colors in some layer":"plus de 4 couleurs dans une couche","too many colours for the loadout":"trop de couleurs pour les têtes"};
+function reasonFr(r){return REASON[r]||r||"impossible"}
+function dur(s){s=Math.round(+s||0);var h=Math.floor(s/3600),m=Math.round((s%3600)/60);if(m===60){h++;m=0}return h?(h+" h "+(m<10?"0":"")+m):(m+" min")}
+function estTxt(e){return e&&e.total_s?"≈ "+dur(e.total_s):""}
+function usedT(t){var g=I().grams||[],o=I().order||[];if(!g.length&&!o.length)return true;return (g[t]>0)||o.indexOf(t)>=0}
+function hiddenCount(){var r=D.report||{},n=0;(r.slicer_colors||[]).forEach(function(c){if(!usedT(c.t))n++});return n}
 function planKey(){return forcedOn()?"slicer":S.sel}
 function mapping(){
   var r=D.report||{},p=(r.plans||{})[planKey()]||{},out=[];
-  (p.mapping||[]).forEach(function(m){var s=m.slot;var row={t:m.t,slot:s?{ace:s.ace,slot:s.slot,material:s.material,color:s.color}:null,tier:m.tier,loose:m.loose_mat};
+  (p.mapping||[]).forEach(function(m){if(!usedT(m.t))return;var s=m.slot;var row={t:m.t,slot:s?{ace:s.ace,slot:s.slot,material:s.material,color:s.color}:null,tier:m.tier,loose:m.loose_mat};
     if(S.forced[m.t]!=null){var f=slotBy(S.forced[m.t]);if(f){row.slot={ace:f.ace,slot:f.slot,material:f.material,color:f.color,name:f.name};row.tier="manual"}}
     out.push(row)});
   return out}
 function headOf(row){return row.slot?row.slot.slot:null}
 function placement(){
   var r=D.report||{},k=planKey();if(!r.plans||k==="slicer"||forcedOn())return null;
-  var p=r.plans[k]||{},rows=p.mapping||[];if(!rows.some(function(m){return m.tier==="planned"}))return null;
+  var p=r.plans[k]||{},rows=(p.mapping||[]).filter(function(m){return usedT(m.t)});if(!rows.some(function(m){return m.tier==="planned"}))return null;
   var src={};((r.plans.slicer||{}).mapping||[]).forEach(function(m){if(m.slot)src[m.t]={ace:m.slot.ace,slot:m.slot.slot,color:m.slot.color}});
   var moves=[],missing=[],tg={};
   rows.forEach(function(m){if(!m.slot)return;var key=m.slot.ace+"_"+m.slot.slot,s=src[m.t];tg[key]={t:m.t,s:s,c:(s&&s.color)||m.slot.color};
@@ -1658,8 +1999,9 @@ function layoutCard(L,colors){
   h+='<b>Plan « '+esc((D.labels||{})[planKey()]||planKey())+' » : '+p.swaps+' échange(s)'+(sp!=null?' au lieu de '+sp:'')+(L.moves.length?' en déplaçant '+L.moves.length+' bobine(s)':'')+'.</b>';
   if(L.ready)h+=' <span class="okc">Les bobines sont en place : tu peux lancer.</span>';
   if(L.order.length){h+='<div class="psub">Dans l’ordre :</div><ol class="steps">';
-    L.order.forEach(function(m){if(m.park){h+='<li>Pose de côté la bobine de '+esc(where(m.park))+' (elle sera remise ensuite)</li>';return}
-      var c=colors[m.t]||{};h+='<li>'+(m.out?'Retire '+esc(cname(m.out.color))+' de '+esc(where(m.to))+', puis : ':'')+sw(m.c)+'<b>'+esc(cname(m.c))+'</b> <small>filament '+(m.t+1)+'</small> : '+esc(where(m.from))+' → <b>'+esc(where(m.to))+'</b></li>'});
+    L.order.forEach(function(m,i){if(m.park){h+='<li>Pose de côté la bobine de '+esc(where(m.park))+' (elle sera remise ensuite)</li>';return}
+      var c=colors[m.t]||{},dn=S.done[i];h+='<li>'+(m.out?'Retire '+esc(cname(m.out.color))+' de '+esc(where(m.to))+', puis : ':'')+sw(m.c)+'<b>'+esc(cname(m.c))+'</b> <small>filament '+(m.t+1)+'</small> : '+esc(where(m.from))+' → <b>'+esc(where(m.to))+'</b>'+
+        (dn?' <span class="okc">✓ noté</span>':' <button class="ghost mini" data-mv="'+i+'" data-f="'+m.from.ace+'_'+m.from.slot+'" data-to="'+m.to.ace+'_'+m.to.slot+'"'+(S.busy?' disabled':'')+' title="Après l’avoir posée : sa couleur, sa matière et sa bobine de la table multiACE suivent dans le nouveau slot (une bobine RFID se relit seule)">C’est fait</button>')+'</li>'});
     h+='</ol>'}
   if(L.missing.length)h+='<div class="warnc">Bobine absente des ACE pour : '+L.missing.map(function(t){return "filament "+(t+1)}).join(", ")+'.</div>';
   h+='<div class="psub">Disposition finale :</div><table class="grid"><tr><th></th>';for(var s=0;s<4;s++)h+='<th>Slot '+(s+1)+' (T'+(s+1)+')</th>';h+='</tr>';
@@ -1704,9 +2046,10 @@ function render(){
     h+='<div class="stats"><div class="stat"><b>'+(p.tool_changes!=null?p.tool_changes:"–")+'</b><span>changements d’outil</span></div>'+
        '<div class="stat"><b>'+(p.swaps!=null?p.swaps:"–")+'</b><span>échanges de bobine (ACE)'+(forcedOn()?' · avant tes choix':'')+'</span></div>'+
        '<div class="stat"><b>'+st.length+'</b><span>tête(s) chargée(s) au départ</span></div>'+
-       '<div class="stat"><b>'+rows.length+'</b><span>couleur(s) du fichier</span></div></div>';
+       '<div class="stat"><b>'+rows.length+'</b><span>couleur(s) du fichier</span></div>'+
+       (p.estimate&&p.estimate.total_s?'<div class="stat"><b>'+dur(p.estimate.total_s)+'</b><span>durée estimée par la U1'+(p.estimate.added_s?' · dont '+dur(p.estimate.added_s)+' d’échanges':'')+(p.estimate.purge&&p.estimate.purge.g?' · purge '+Math.round(p.estimate.purge.g)+' g':'')+(forcedOn()?' · avant tes choix':'')+'</span></div>':'')+'</div>';
     h+='<div class="plans">';["slicer","optimize","layer"].forEach(function(k){var q=plans[k];if(!q)return;var on=planKey()===k,dis=!q.feasible||(forcedOn()&&k!=="slicer");
-      h+='<label class="'+(on?'on':'')+(dis?' off':'')+'"><input type="radio" name="p" value="'+k+'"'+(on?' checked':'')+(dis?' disabled':'')+'><b>'+esc((D.labels||{})[k]||k)+'</b> <small>'+(q.feasible?q.swaps+' échange(s)':esc(q.reason||'impossible'))+'</small></label>'});
+      h+='<label class="'+(on?'on':'')+(dis?' off':'')+'"><input type="radio" name="p" value="'+k+'"'+(on?' checked':'')+(dis?' disabled':'')+'><b>'+esc((D.labels||{})[k]||k)+'</b> <small>'+(q.feasible?q.swaps+' échange(s)'+(q.estimate&&q.estimate.total_s?' · '+estTxt(q.estimate):'')+(q.suggested?' · en déplaçant des bobines':''):esc(reasonFr(q.reason)))+'</small></label>'});
     h+='</div>';
     h+='<table><tr><th>Slicer</th><th></th><th>Bobine</th><th>Correspondance</th>'+(D.can_force?'<th>Forcer une bobine</th>':'')+'</tr>';
     rows.forEach(function(row){var c=colors[row.t]||{},sl=(I().sliced||[])[row.t]||{},g=(I().grams||[])[row.t],s=row.slot,w=nozWarn(row);
@@ -1727,6 +2070,7 @@ function render(){
         h+='</div></td>'}
       h+='</tr>'});
     h+='</table>';
+    var hid=hiddenCount();if(hid)h+='<p class="hint">'+hid+' filament(s) du projet non utilisé(s) dans ce fichier : masqué(s).</p>';
     if(D.can_force)h+='<p class="hint">Choisis une bobine dans la dernière colonne pour imposer ta couleur : le plan passe sur « Comme tranché » et la U1 applique tes choix tels quels (comme dans son Preflight). Le type de buse de chaque tête est rappelé.'+(forcedOn()?' <button class="ghost mini" id="unforce">Revenir au choix de la U1</button>':'')+'</p>';
     else h+='<p class="hint">Cette version de multiACE ne permet pas d’imposer une bobine depuis Orca : utilise « Ouvrir dans le Preflight multiACE ».</p>';
     var LAY=placement();if(LAY)h+=layoutCard(LAY,colors);
@@ -1750,7 +2094,7 @@ function render(){
   if(S.msg)h+='<div id="msg" class="msg '+(S.msg.ok?'ok':'bad')+'">'+esc(S.msg.text)+'</div>';
   h+='<div class="row">';
   var LR=r?placement():null,blk=S.busy||!planKey()||(LR&&!LR.ready);
-  if(r)h+='<button id="go"'+(blk?' disabled':'')+'>Lancer l’impression</button><button class="ghost" id="up"'+(blk?' disabled':'')+'>Envoyer sur la U1 sans lancer</button>';
+  if(r)h+='<button id="go"'+(blk?' disabled':'')+'>Lancer l’impression</button><button class="ghost" id="up"'+(blk?' disabled':'')+'>Envoyer sur la U1 sans lancer</button>'+(D.can_queue?'<button class="ghost" id="qu"'+(blk?' disabled':'')+' title="File d’impression de multiACE (Print Hub) : tu lances depuis multiACE quand tu veux">Mettre dans la file multiACE</button>':'');
   h+='<button class="ghost" id="pf"'+(S.busy?' disabled':'')+'>Ouvrir dans le Preflight multiACE</button>'+(r?'<button class="ghost" id="rl"'+(S.busy?' disabled':'')+'>Recharger</button>':'')+'<button class="ghost" id="x">Fermer</button></div>';
   a.innerHTML=h;bind();
 }
@@ -1766,16 +2110,21 @@ function bind(){
   Array.prototype.forEach.call(q('[data-ch]'),function(e){e.onclick=function(ev){ev.stopPropagation();var t=+e.dataset.ch;if(e.dataset.v==="")delete S.forced[t];else S.forced[t]=+e.dataset.v;S.open=null;S.flow=null;render()}});
   Array.prototype.forEach.call(q('.fh'),function(e){e.onchange=function(){var h=+e.dataset.h,i=S.flow.indexOf(h);if(e.checked&&i<0)S.flow.push(h);if(!e.checked&&i>=0)S.flow.splice(i,1)}});
   ["bed","flow","zone","cam","soft"].forEach(function(k){var e=document.getElementById(k);if(e)e.onchange=function(){D.prefs=D.prefs||{};D.prefs[k]=e.checked;render()}});
+  Array.prototype.forEach.call(q('[data-mv]'),function(b){b.onclick=function(){var f=b.dataset.f.split("_").map(Number),t=b.dataset.to.split("_").map(Number);
+    S.busy=true;S.msg=null;render();post({a:"moved",step:+b.dataset.mv,from_ace:f[0],from_slot:f[1],to_ace:t[0],to_slot:t[1]})}});
   Array.prototype.forEach.call(q('[data-pre]'),function(b){b.onclick=function(){var v=b.dataset.pre.split("_").map(Number);b.disabled=true;b.textContent="Ajoutée à la file";post({a:"precal",head:v[0],ace:v[1],slot:v[2]})}});
   on("unforce",function(){S.forced={};S.flow=null;render()});
-  on("go",function(){send("print")});on("up",function(){send("upload")});
+  on("go",function(){send("print")});on("up",function(){send("upload")});on("qu",function(){send("queue")});
   on("pf",function(){S.busy=true;S.msg=null;render();post({a:"preflight"})});
   on("rl",function(){S.busy=true;S.msg=null;render();post({a:"reload"})});
   on("rl2",function(){S.busy=true;S.msg=null;render();post({a:"reload"})});
   on("x",function(){post({a:"close"})});
 }
-window.__orca_on_message=function(m){if(m.type==="data"){var keep=D.report&&m.data.report&&D.name===m.data.name;D=m.data;if(!keep){S.sel=null;S.forced={}}S.flow=null;S.busy=false;S.msg=null}
-  else if(m.type==="done"){S.busy=!!m.final;S.msg=m}render()};
+window.__orca_on_message=function(m){if(m.type==="data"){var keep=D.report&&m.data.report&&D.name===m.data.name;D=m.data;if(!keep){S.sel=null;S.forced={}}S.flow=null;S.busy=false;S.msg=null;S.done={}}
+  else if(m.type==="done"){S.busy=!!m.final;S.msg=m;
+    if(m.ok&&m.step!=null){S.done[m.step]=true;var LD=placement();
+      if(LD&&LD.order.every(function(x,i){return x.park||S.done[i]})){S.busy=true;render();post({a:"reload"});return}}}
+  render()};
 try{window.orca.onMessage(window.__orca_on_message)}catch(e){}
 document.addEventListener("click",function(){if(S.open!==null){S.open=null;render()}});
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&S.open!==null){S.open=null;render()}});
@@ -1793,6 +2142,8 @@ class U1PreflightWindow:
         self.live_sig = None
         self.prefs = {"bed": True, "zone": True, "flow": False, "cam": False, "soft": True}
         self.report = None
+        self.info = None
+        self.load = None
         self._lock = threading.Lock()
 
     def start(self, path, name, host, delay=1.0):
@@ -1808,7 +2159,8 @@ class U1PreflightWindow:
             client = MultiAce(host)
             version = ""
             try:
-                version = str(client.state(timeout=TIMEOUT_BG).get("version") or "")
+                v = client.get_json("/version", timeout=TIMEOUT_BG)   # {"web": "1.90", ...} (1.27b et 1.90)
+                version = str((v or {}).get("web") or "") if isinstance(v, dict) else ""
             except Exception:
                 pass
             deadline = time.monotonic() + U1ACCESS_WAIT
@@ -1847,11 +2199,32 @@ class U1PreflightWindow:
                 except OSError:
                     break
             load = load_info(client)
+            can_queue = False
+            try:
+                q = client.get_json("/queue", timeout=TIMEOUT_BG)     # file Print Hub (multiACE 1.90+)
+                can_queue = isinstance(q, dict) and isinstance(q.get("queue"), list)
+            except Exception:
+                pass
+            hnt = ((live or {}).get("head_ctx") or {}).get("head_nozzle_types") or {}
+            if isinstance(hnt, dict) and hnt:
+                real = list(load.get("real") or ["", "", "", ""])
+                for k, v in hnt.items():
+                    try:
+                        h = int(k)
+                    except (TypeError, ValueError):
+                        continue
+                    lab = NOZZLE_FR.get(str(v).strip().lower().replace("-", "_"), "")
+                    if 0 <= h <= 3 and lab in NOZZLE_CHOICES:
+                        real[h] = lab
+                load["real"], load["real_src"] = real, "multiACE"
             self.live_sig = _signature(live)
             self.report = report
+            self.info = info
+            self.load = load
             caps = _u1code.get("caps") or {}
             self._send({"name": name, "version": version, "sha": sha, "report": report, "labels": PLAN_LABELS,
-                        "prefs": self.prefs, "info": info, "load": load, "can_force": bool(caps.get("remap"))})
+                        "prefs": self.prefs, "info": info, "load": load, "can_force": bool(caps.get("remap")),
+                        "can_queue": can_queue})
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -1876,18 +2249,18 @@ class U1PreflightWindow:
             except Exception:
                 pass
         payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
-        self.window = orca.host.ui.create_window(html=U1_PAGE.replace("__DATA__", payload),
-                                                 title="multiACE - Preflight de la U1", width=1100, height=860,
+        self.window = orca.host.ui.create_window(html=i18n_page(U1_PAGE.replace("__DATA__", payload)),
+                                                 title=tr("multiACE - Preflight de la U1"), width=1100, height=860,
                                                  on_message=self.on_message, on_close=self._closed)
 
     def _closed(self):
         self.window = None
 
-    def _reply(self, ok, text, final=False):
+    def _reply(self, ok, text, final=False, step=None):
         w = self.window
         if w is not None:
             try:
-                w.post({"type": "done", "ok": ok, "text": text, "final": final})
+                w.post({"type": "done", "ok": ok, "text": text, "final": final, "step": step})
             except Exception:
                 pass
 
@@ -1905,14 +2278,14 @@ class U1PreflightWindow:
             return
         if a == "preflight":
             threading.Thread(target=self._to_preflight, daemon=True).start()
-        elif a in ("print", "upload") and m.get("plan") in PLAN_LABELS:
+        elif a in ("print", "upload", "queue") and m.get("plan") in PLAN_LABELS:
             self.prefs = {k: m.get(k) is True for k in ("bed", "zone", "flow", "cam", "soft")}
             prefs = dict(self.prefs)
             fh = m.get("flow_heads")
             if isinstance(fh, list):
                 prefs["flow_heads"] = [h for h in fh if isinstance(h, int) and not isinstance(h, bool) and 0 <= h <= 3]
             forced = m.get("forced") if isinstance(m.get("forced"), dict) else {}
-            threading.Thread(target=self._print, args=(m["plan"], prefs, forced, a == "upload"),
+            threading.Thread(target=self._print, args=(m["plan"], prefs, forced, a),
                              daemon=True).start()
         elif a == "precal":
             try:
@@ -1928,6 +2301,54 @@ class U1PreflightWindow:
                                   "bobine." % (ace + 1, sl + 1, h + 1))
         elif a == "reload":
             self.start(self.job["path"], self.job["name"], self.job["host"], delay=0)
+        elif a == "moved":
+            threading.Thread(target=self._moved, args=(m,), daemon=True).start()
+
+    def _moved(self, m):
+        """« Disposition finale » : l'utilisateur a deplace une bobine a la main. Son identite (couleur,
+        matiere, bobine de la table multiACE) suit dans le nouveau slot, par le meme chemin que le
+        selecteur de slot de multiACE (slot-override + ACE_SPOOL_ASSIGN). Une bobine RFID se relit seule."""
+        try:
+            step = int(m.get("step"))
+            fa, fs, ta, ts = (int(m.get(k)) for k in ("from_ace", "from_slot", "to_ace", "to_slot"))
+        except (TypeError, ValueError):
+            return
+        if not all(0 <= v <= 7 for v in (fa, ta)) or not all(0 <= v <= 3 for v in (fs, ts)) or (fa, fs) == (ta, ts):
+            return
+        idt = ((self.load or {}).get("ident") or {}).get("%d_%d" % (fa, fs))
+        if not idt:
+            self._reply(False, "Bobine de ACE %d · slot %d inconnue : « Recharger »." % (fa + 1, fs + 1), step=None)
+            return
+        client = MultiAce(self.job["host"])
+        try:
+            state = client.state(timeout=TIMEOUT_UI)
+            ps = str(state.get("printer_state") or "").lower()
+            if ps in ("printing", "paused"):
+                raise MultiAceError("la U1 imprime")
+            now = {(x["ace"], x["slot"]): x for x in all_slots_from_state(state)}
+            dst = now.get((ta, ts))
+            if dst is None:
+                raise MultiAceError("ACE %d · slot %d est vide : pose d'abord la bobine" % (ta + 1, ts + 1))
+            if idt.get("source") != "rfid" and dst.get("source") != "rfid":
+                color = idt.get("color") or ""
+                if not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+                    raise MultiAceError("couleur de la bobine illisible")
+                client.set_override(ta, ts, gcode_safe(idt.get("material"), 16).upper() or "PLA",
+                                    gcode_safe(idt.get("brand")), gcode_safe(idt.get("subtype")), color.lower())
+            if idt.get("source") == "override":
+                client.clear_override(fa, fs)       # l'etiquette restait sur l'ancien slot
+            sid = idt.get("spool")
+            if sid and sid.isdigit():
+                bind = state.get("spool_binding") or {}
+                if str(bind.get("%d_%d" % (fa, fs))) == sid:
+                    client.macro("ACE_SPOOL_ASSIGN", {"ACE": fa, "SLOT": fs}, timeout=60)
+                client.macro("ACE_SPOOL_ASSIGN", {"ACE": ta, "SLOT": ts, "ID": sid}, timeout=60)
+            client.macro("MULTIACE_REFRESH_OVERRIDES", {}, timeout=60)
+            self._reply(True, "Bobine notée dans ACE %d · slot %d." % (ta + 1, ts + 1), step=step)
+        except PermissionError:
+            self._reply(False, permission_text(self.job["host"]))
+        except Exception as e:
+            self._reply(False, "Échec : %s" % e)
 
     def _to_preflight(self):
         job = self.job
@@ -1941,16 +2362,17 @@ class U1PreflightWindow:
         except Exception as e:
             self._reply(False, "Échec : %s" % e)
 
-    def _print(self, plan_name, prefs, forced=None, upload_only=False):
+    def _print(self, plan_name, prefs, forced=None, how="print"):
         job = self.job
         client = MultiAce(job["host"])
+        upload_only = how in ("upload", "queue", True)
         try:
             if not upload_only:
                 state = client.state(timeout=TIMEOUT_UI)
                 ps = str(state.get("printer_state") or "").lower()
                 if ps in ("printing", "paused") or state.get("swap_in_progress"):
                     raise MultiAceError("la U1 est occupée (%s)" % (ps or "échange en cours"))
-            todo = placement_todo(self.report, plan_name)
+            todo = placement_todo(self.report, plan_name, used_filaments(self.info))
             if todo:
                 raise MultiAceError("place d'abord les bobines comme dans la « Disposition finale » (filament %s), "
                                     "puis « Recharger »" % ", ".join(str(t + 1) for t in todo))
@@ -1964,6 +2386,9 @@ class U1PreflightWindow:
             base, ext = os.path.splitext(os.path.basename(job["name"]))
             target = base + "_multiACE" + (ext or ".gcode")
             what = "le plan « %s »%s" % (PLAN_LABELS[plan_name], " et tes bobines imposées" if forced else "")
+            if how == "queue":
+                self._enqueue(client, final, target, plan_name, forced, what, load_txt)
+                return
             if upload_only:
                 client.send_gcode(final, target, endpoint="moonraker")
                 self._reply(True, "%s envoyé sur la U1 sans lancer (%s) : lance-le depuis l'écran ou Fluidd.%s"
@@ -1981,12 +2406,57 @@ class U1PreflightWindow:
             self._reply(False, "Envoi annulé : %s" % e)
 
 
+    def _enqueue(self, client, final, target, plan_name, forced, what, load_txt):
+        """File d'impression de multiACE (Print Hub, 1.90+) : meme chemin que son Preflight « mettre en
+        file » — fichier prepare depose dans gcodes/multiace_queue/ sans lancer, puis enregistre par
+        POST /api/queue avec les slots qu'il utilise. Au lancement depuis multiACE, la U1 reverifie que
+        ce sont toujours les memes bobines."""
+        upname = uuid.uuid4().hex[:12] + "_" + target
+        res = client.send_gcode(final, upname, endpoint="moonraker", folder=QUEUE_DIR)
+        item = ((res or {}).get("result") or {}).get("item") or {}
+        rel = str(item.get("path") or "")
+        if not rel.startswith(QUEUE_DIR + "/"):
+            rel = QUEUE_DIR + "/" + re.sub(r"[\x00-\x1f\x7f\"\\/]", "_", upname)[-180:]
+        used = None
+        try:
+            _pp, core, _sha = u1_code(client)
+            if hasattr(core, "used_ace_slots_file"):
+                used = [[int(a), int(b)] for a, b in core.used_ace_slots_file(final) or []]
+        except Exception:
+            used = None
+        plan = ((self.report or {}).get("plans") or {}).get(plan_name) or {}
+        body = {"filename": target, "path": rel, "mode": plan_name, "used_slots": used,
+                "estimate": None if forced else plan.get("estimate"),
+                "swaps": None if forced else plan.get("swaps")}
+        try:
+            client.post_json("/queue", body, timeout=TIMEOUT_UI)
+        except Exception:
+            client.delete_printer_file(rel)      # pas d'entree dans la file : ne pas laisser le fichier
+            raise
+        self._reply(True, "%s ajouté à la file multiACE (%s) : lance-le depuis multiACE → Print Hub ; la U1 "
+                          "revérifie les bobines au lancement.%s" % (target, what, load_txt))
+
+
+QUEUE_DIR = "multiace_queue"       # dossier de la file multiACE (main.py : _QUEUE_DIR)
 _U1PF = U1PreflightWindow()
 
 
 # --------------------------------------------------------------------------- pipeline
 
 _recent_sends = {}
+
+
+def _wait_access(fn, wait=None):
+    """Execute fn ; tant qu'OrcaSlicer attend la reponse a sa demande d'autorisation (PermissionError de
+    l'audit « open »), reessaie chaque seconde, au plus U1ACCESS_WAIT s. Les autres erreurs passent."""
+    deadline = time.monotonic() + (U1ACCESS_WAIT if wait is None else wait)
+    while True:
+        try:
+            return fn()
+        except PermissionError:
+            if time.monotonic() > deadline or _STOP.is_set():
+                raise
+            time.sleep(1)
 
 
 class SendToPreflight(orca.slicing.SlicingPipelineCapabilityBase):
@@ -2016,27 +2486,27 @@ class SendToPreflight(orca.slicing.SlicingPipelineCapabilityBase):
 
     def execute(self, ctx):
         if ctx.step != orca.slicing.Step.psGCodePostProcess:
-            return orca.ExecutionResult.success()
+            return _ok()
         path = getattr(ctx, "gcode_path", "") or ""
         if not path or not os.path.exists(path):
-            return orca.ExecutionResult.skipped("multiACE : pas de fichier G-code")
+            return _skip("multiACE : pas de fichier G-code")
         note_pipeline_ran()
         cfg = self._config()
         target = (getattr(ctx, "host", "") or "").strip()
         to_printer = target not in ("", "File")
         u1code = load_settings().get("u1_code", True)
         if to_printer and not u1code and not cfg.get("also_on_print"):
-            return orca.ExecutionResult.skipped("multiACE : envoi direct a l'imprimante, Preflight non utilise")
+            return _skip("multiACE : envoi direct a l'imprimante, Preflight non utilise")
 
         name = os.path.basename((getattr(ctx, "output_name", "") or "").strip() or path)
         try:
-            facts = gcode_facts(path)
+            facts = _wait_access(lambda: gcode_facts(path))
         except OSError as e:
-            return orca.ExecutionResult.failure(orca.PluginResult.RecoverableError, "multiACE : lecture du G-code impossible (%s)" % e)
+            return _fail(orca.PluginResult.RecoverableError, "multiACE : lecture du G-code impossible (%s)" % e)
         if facts["processed"]:
-            return orca.ExecutionResult.skipped("multiACE : G-code deja traite par multiACE (script de post-traitement actif ?), non envoye")
+            return _skip("multiACE : G-code deja traite par multiACE (script de post-traitement actif ?), non envoye")
         if facts["u1control"]:
-            return orca.ExecutionResult.failure(
+            return _fail(
                 orca.PluginResult.RecoverableError,
                 "multiACE : ce G-code a ete modifie par U1 Control (\"U1 print setup\"). Decoche-le pour ce profil "
                 "afin que multiACE recoive l'export original.")
@@ -2046,18 +2516,22 @@ class SendToPreflight(orca.slicing.SlicingPipelineCapabilityBase):
         except (TypeError, ValueError):
             minimum = 1
         if used is not None and used < minimum:
-            return orca.ExecutionResult.skipped("multiACE : %d filament(s) utilise(s), envoi reserve a %d et plus" % (used, minimum))
+            return _skip("multiACE : %d filament(s) utilise(s), envoi reserve a %d et plus" % (used, minimum))
 
         size = os.path.getsize(path)
         key = (name, size)
         now = time.time()
         # L'etape peut tourner deux fois de suite pour un meme export : on ignore le doublon immediat.
         if now - _recent_sends.get(key, 0) < 90:
-            return orca.ExecutionResult.skipped("multiACE : deja traite")
+            return _skip("multiACE : deja traite")
 
         kept = False
+        # Copie : Preflight de la U1, et « renvoyer le dernier G-code ». Au 1er export d'une copie du plugin
+        # (nouvelle installation, version locale...), OrcaSlicer demande l'autorisation « open » et refuse
+        # l'acces tant qu'on n'a pas repondu : on attend la reponse au lieu de partir dans le Preflight de
+        # multiACE (c'etait la cause de « le premier export ouvre multiACE »).
         try:
-            keep_last_gcode(path, name)     # copie : Preflight de la U1, et « renvoyer le dernier G-code »
+            _wait_access(lambda: keep_last_gcode(path, name))
             kept = True
         except OSError:
             pass
@@ -2069,25 +2543,25 @@ class SendToPreflight(orca.slicing.SlicingPipelineCapabilityBase):
             except Exception:
                 host = ""
         if not host:
-            return orca.ExecutionResult.failure(orca.PluginResult.RecoverableError,
+            return _fail(orca.PluginResult.RecoverableError,
                                                 "multiACE : adresse de la U1 inconnue : renseigne-la dans le panneau ACE (Options → Adresse de la U1)")
         if u1code and kept:
             _recent_sends[key] = now
             _U1PF.start(last_gcode_paths()[0], name, host)
             if to_printer:
-                return orca.ExecutionResult.failure(
+                return _fail(
                     orca.PluginResult.FatalError,
                     "multiACE : impression préparée par le Preflight de la U1 (envoi direct d'OrcaSlicer annulé, c'est normal).")
-            return orca.ExecutionResult.success("multiACE : préparation avec le code multiACE de la U1 pour \"%s\"" % name)
+            return _ok("multiACE : préparation avec le code multiACE de la U1 pour \"%s\"" % name)
         try:
             MultiAce(host).send_gcode(path, name)
         except PermissionError:
-            return orca.ExecutionResult.failure(
+            return _fail(
                 orca.PluginResult.RecoverableError,
                 "multiACE : acces reseau non autorise depuis le tranchage. Ouvre l'onglet multiACE, clique "
                 "Enregistrer pour autoriser %s, puis renvoie depuis l'onglet." % (origin_of(host) or "la U1"))
         except Exception as e:
-            return orca.ExecutionResult.failure(
+            return _fail(
                 orca.PluginResult.RecoverableError,
                 "multiACE : envoi au Preflight impossible (%s). Le G-code est garde : renvoie-le depuis l'onglet multiACE." % e)
         _recent_sends[key] = now
@@ -2099,10 +2573,10 @@ class SendToPreflight(orca.slicing.SlicingPipelineCapabilityBase):
             name, host, (" (%d filaments)" % used) if used else "")
         if to_printer:
             # Envoye au Preflight : on arrete l'envoi direct pour que l'impression ne parte pas deux fois.
-            return orca.ExecutionResult.failure(
+            return _fail(
                 orca.PluginResult.FatalError,
                 message + ". Envoi direct d'OrcaSlicer annule : lance l'impression depuis le Preflight multiACE.")
-        return orca.ExecutionResult.success(message)
+        return _ok(message)
 
 
 # --------------------------------------------------------------------------- panneau ACE
@@ -2146,7 +2620,7 @@ select option{background:#22262c;color:#e8eaed}
 .queue .qb{font-size:11px;padding:3px 8px;margin-right:6px}
 .msg.show{display:block}.msg.info{background:rgba(0,150,136,.15)}.msg.err{background:rgba(224,90,79,.15)}
 .badge{font-size:10.5px;border-radius:4px;padding:0 5px;background:rgba(255,255,255,.08);color:var(--muted)}
-.badge.derived{color:var(--warn)}
+.badge.derived{color:var(--warn)}.badge.nocal{color:#f0b060;background:rgba(224,160,48,.14)}
 .note{color:var(--muted);font-size:11.5px}
 .prep{margin:4px 0 8px;padding:7px 8px;border-radius:8px;background:rgba(255,255,255,.04)}
 .ph{margin:0 0 4px}.ng{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:4px 0 6px}
@@ -2251,7 +2725,7 @@ h4.fh{cursor:pointer;user-select:none}h4.fh:hover{color:var(--fg)}
 <div id="optsCard" class="card optscard" hidden><h4><span>⚙ Options</span><button id="optX" class="ghost" title="Fermer les options">✕</button></h4>
 <div class="hostline">Adresse de la U1 : <b id="hostCur">—</b> <button id="hostEdit" class="ghost">Modifier</button></div>
 <label class="ah" title="Si la U1 n'a pas fait son homing, le plugin le fait tout seul avant de charger / échanger / décharger, sans te demander."><input type="checkbox" id="ah"> Homing automatique si nécessaire</label>
-<label class="ah" title="Si un ACE se déconnecte puis revient : le plugin relance son séchage là où il en était, et pendant une impression il relance la poussée du filament, uniquement pour la tête qui imprime (si multiACE ne l'a pas déjà fait)."><input type="checkbox" id="gf"> Garde-fou : relancer après une déconnexion d'ACE</label><label class="ah" title="À l'export, le plugin exécute dans Orca le Preflight fourni par ta U1 (code multiACE de ta version), vérifie tout puis imprime. Décoché : le fichier d'origine part dans le Preflight de multiACE, sans rien exécuter."><input type="checkbox" id="uc"> Préparer l'export avec le code multiACE de la U1</label><label class="ah" title="Quand l'imprimante est une U1 et que le profil de traitement n'a pas l'étape « multiACE : envoyer au Preflight », le plugin l'ajoute. Le profil devient « modifié » : enregistre-le pour la garder."><input type="checkbox" id="ap"> Ajouter l'étape Preflight aux profils de la U1</label><div class="hostline" id="pipeSt">Étape Preflight : …</div>
+<label class="ah" title="Si un ACE se déconnecte puis revient : le plugin relance son séchage là où il en était, et pendant une impression il relance la poussée du filament, uniquement pour la tête qui imprime (si multiACE ne l'a pas déjà fait)."><input type="checkbox" id="gf"> Garde-fou : relancer après une déconnexion d'ACE</label><label class="ah" title="À l'export, le plugin exécute dans Orca le Preflight fourni par ta U1 (code multiACE de ta version), vérifie tout puis imprime. Décoché : le fichier d'origine part dans le Preflight de multiACE, sans rien exécuter."><input type="checkbox" id="uc"> Préparer l'export avec le code multiACE de la U1</label><label class="ah" title="Quand l'imprimante est une U1 et que le profil de traitement n'a pas l'étape « multiACE : envoyer au Preflight », le plugin l'ajoute. Le profil devient « modifié » : enregistre-le pour la garder."><input type="checkbox" id="ap"> Ajouter l'étape Preflight aux profils de la U1</label><div class="hostline" id="pipeSt">Étape Preflight : …</div><label class="ah">Langue / Language <select id="lang"><option value="auto">Auto (Windows)</option><option value="fr">Français</option><option value="en">English</option></select></label>
 
 </div>
 <div id="hostbox" class="card hostbox" hidden><b id="hostTitle">Adresse de la U1 introuvable</b>
@@ -2422,7 +2896,20 @@ h4.fh{cursor:pointer;user-select:none}h4.fh:hover{color:var(--fg)}
       var mine=p.real_src==="u1"?'<div class="note">Lues dans la U1 : '+real.map(function(v,h){return 'T'+(h+1)+' '+esc(v)}).join(" · ")+'. Rien à saisir.</div>':
         (p.real_src==="mixte"?'<div class="note">En partie lues dans la U1 ; le reste vient de ta saisie :</div>'+sel:
          '<div class="note">La U1 ne donne pas ses buses (firmware ancien) : ta saisie est utilisée.</div>'+sel);
-      html=head+warn+fold("d","Détail par filament",rows,false)+fold("u","Ma U1 (buses vissées)"+(p.real_src==="u1"?" · lues dans la U1":""),mine,false);
+      var vrows="",vbad=0;
+      if(p.virtual&&p.virtual.length){
+        vrows=p.virtual.map(function(r){var st;
+          if(!r.present){st='<span class="warnc">⚠ ACE '+n(r.ace)+' absent</span>';vbad++}
+          else if(r.empty){st='<span class="warnc">⚠ slot vide</span>';vbad++}
+          else if(!r.match){st=sw(col(r.spool_color))+'<span class="warnc">⚠ bobine '+esc(cname(r.spool_color))+(r.material?' '+esc(r.material):'')+'</span>';vbad++}
+          else st=sw(col(r.spool_color))+esc(cname(r.spool_color))+(r.material?' '+esc(r.material):'')+' <span class="okc">✓</span>';
+          var hd=r.head!=null?' → T'+(r.head+1)+(r.need?' · '+esc(r.need):''):'';
+          var nz=(r.now&&r.need&&r.now!==r.need)?' <span class="warnc">(Orca : '+esc(r.now)+')</span>':'';
+          return '<div class="pr">'+sw(col(r.color))+'<span><b>Filament '+(r.t+1)+'</b> '+esc(cname(r.color))+' → ACE '+n(r.ace)+' slot '+n(r.slot)+(r.mapped?' <small>(table)</small>':'')+hd+nz+' : '+st+'</span></div>'}).join("")+
+          '<div class="note">Table « Slicer filament → MMU / Slot » de multiACE (Config). Elle sert quand le fichier est imprimé tel quel ; avec le Preflight, la U1 réattribue par couleur.</div>';
+        if(vbad)warn+='<div class="pw">⚠ '+vbad+' filament(s) au-delà du 4e : bobine différente dans leur slot multiACE (voir « Filaments 5 et plus »).</div>';
+      }
+      html=head+warn+fold("d","Détail par filament",rows,false)+(vrows?fold("v","Filaments 5 et plus (outils virtuels multiACE)",vrows,!!vbad):"")+fold("u","Ma U1 (buses vissées)"+(p.real_src==="u1"?" · lues dans la U1":""),mine,false);
     }
     var mv='<button class="pmv" data-pmv="1" title="Déplacer cette carte">'+(S.prepPos==="bottom"?"↑ en haut":"↓ en bas")+'</button>';
     var pf=isF("prep"),stat=!p.real_known?"":(p.todo.length?' <span class="warnc">· à régler</span>':' <span class="okc">· ✓</span>');
@@ -2469,6 +2956,7 @@ h4.fh{cursor:pointer;user-select:none}h4.fh:hover{color:var(--fg)}
         var onNow=heads.some(function(t){return t.ace===a.idx&&t.slot===s.idx&&t.filament_detected});
         var name=empty?"vide":esc((s.brand?s.brand+" ":"")+(s.material||"inconnu")+(s.subtype?" "+s.subtype:""));
         var badge=s.source==="derived"?' <span class="badge derived">déduit</span>':"";
+        if(!empty&&S.calib&&S.calib[a.idx+"_"+s.idx]===false)badge+=' <span class="badge nocal" title="Calibre ce chemin dans multiACE : Config → Calibration (le plugin ne le fait pas)">chemin non calibré</span>';
         var busyHead=h!=null&&ph.some(function(t){return t.idx===h&&t.filament_detected});
         var act=busyHead?"swap":"load",verb=busyHead?"Échanger":"Charger";
         var btn=empty||h==null?"":onHead?'<span class="badge">'+(onNow?"sur":"prévue sur")+' T'+n(h)+'</span>':
@@ -2690,6 +3178,7 @@ h4.fh{cursor:pointer;user-select:none}h4.fh:hover{color:var(--fg)}
   $("opt").onclick=function(){showOpts($("optsCard").hidden)};
   $("optX").onclick=function(){showOpts(false)};
   $("hostEdit").onclick=function(){$("hostIn").value=S.host||"";hostBox(true,"Modifier l'adresse de la U1");S.hostEditing=true;$("hostIn").focus()};
+  $("lang").onchange=function(){post({command:"prefs_set",lang:$("lang").value});say("Langue enregistrée : ferme et rouvre le panneau (ou redémarre OrcaSlicer) pour l'appliquer partout. / Language saved: close and reopen the panel (or restart OrcaSlicer) to apply it everywhere.","info")};
   $("ap").onchange=function(){post({command:"prefs_set",auto_pipeline:$("ap").checked});say($("ap").checked?"L'étape Preflight sera ajoutée aux profils de traitement de la U1.":"Le plugin ne touche plus aux profils de traitement.","info")};
   function pipeShow(p){var e=$("pipeSt");if(!e||!p)return;var t="",w=false;
     if(p.state==="present")t="✓ Étape Preflight présente dans « "+esc(p.preset||"")+" »";
@@ -2707,8 +3196,8 @@ h4.fh{cursor:pointer;user-select:none}h4.fh:hover{color:var(--fg)}
   window.orca&&window.orca.onMessage(function(m){
     if(!m)return;
     if(m.command==="host_result"){$("hostOk").disabled=false;if(m.ok){S.host=m.host;$("hostCur").textContent=m.host;hostBox(false);say("Adresse enregistrée : "+m.host,"ok")}else{hostBox(true,m.error||"Adresse invalide");}return}
-    if(m.command==="state"){if(m.nohost){$("st").className="pill bad";$("st").textContent="sans adresse";hostBox(true);return}if(m.error){$("st").className="pill bad";$("st").textContent="hors ligne";say(m.error,"err");if(m.unreachable)hostBox(true,"La U1 ne répond pas à "+(S.host||"cette adresse")+" : vérifie l'adresse.");return}if(!S.hostEditing)hostBox(false);renderPrep(m.prep);pipeShow(m.pipe);if(S.edit){S.last=m.state||{};return}render(m.state||{})}
-    else if(m.command==="prefs"){S.host=m.host||"";S.screen=m.screen||"off";S.cam=m.camera||"off";setCompact(!!m.compact);placeScreen();placeCam();S.prepPos=m.prep_pos==="bottom"?"bottom":"top";placePrep();S.fold=m.folds||{};applyFold();$("ah").checked=!!m.auto_home;$("gf").checked=m.ace_guard!==false;$("uc").checked=m.u1_code!==false;$("ap").checked=m.auto_pipeline!==false;$("hostCur").textContent=S.host||"non renseignée";if(!S.host)hostBox(true)}
+    if(m.command==="state"){if(m.nohost){$("st").className="pill bad";$("st").textContent="sans adresse";hostBox(true);return}if(m.error){$("st").className="pill bad";$("st").textContent="hors ligne";say(m.error,"err");if(m.unreachable)hostBox(true,"La U1 ne répond pas à "+(S.host||"cette adresse")+" : vérifie l'adresse.");return}if(!S.hostEditing)hostBox(false);S.calib=m.calib||null;renderPrep(m.prep);pipeShow(m.pipe);if(S.edit){S.last=m.state||{};return}render(m.state||{})}
+    else if(m.command==="prefs"){S.host=m.host||"";S.screen=m.screen||"off";S.cam=m.camera||"off";setCompact(!!m.compact);placeScreen();placeCam();S.prepPos=m.prep_pos==="bottom"?"bottom":"top";placePrep();S.fold=m.folds||{};applyFold();$("ah").checked=!!m.auto_home;$("gf").checked=m.ace_guard!==false;$("uc").checked=m.u1_code!==false;$("ap").checked=m.auto_pipeline!==false;if($("lang"))$("lang").value=m.lang||"auto";$("hostCur").textContent=S.host||"non renseignée";if(!S.host)hostBox(true)}
     else if(m.command==="done"){S.busy=false;say(m.text,m.ok?"info":"err");
       if(m.fix==="home"){var mm=$("msg");var b=document.createElement("div");b.style.marginTop="8px";
         b.innerHTML='<button class="fixbtn" data-r="1">Faire le homing puis reprendre</button> <button class="fixbtn ghost" data-r="0">Homing seul</button>';
@@ -2784,7 +3273,7 @@ class AcePanelController:
             return "Panneau ferme par l'utilisateur."
         self.closed_by_user = False
         self.panel = orca.host.ui.create_dock_panel(
-            html=PANEL.replace("__VERSION__", VERSION), title="multiACE", width=320, height=620,
+            html=i18n_page(PANEL.replace("__VERSION__", VERSION)), title="multiACE", width=320, height=620,
             on_message=self.on_message, on_close=self.on_close, dock="right")
         return "Panneau ACE ouvert."
 
@@ -2801,7 +3290,7 @@ class AcePanelController:
         try:
             ui = orca.host.ui
             level = getattr(ui, "ImportantNotificationLevel", None) or getattr(ui.NotificationLevel, "ImportantNotificationLevel")
-            ui.push_notification(level, "Panneau multiACE masqué.", "Afficher", self._show_from_notification)
+            _notify(ui, level, "Panneau multiACE masqué.", "Afficher", self._show_from_notification)
         except Exception:
             pass
 
@@ -2869,7 +3358,7 @@ class AcePanelController:
                         "prep_pos": st["prep_pos"], "folds": st["folds"], "camera": st["camera"],
                         "auto_home": st["auto_home"],
                         "ace_guard": st["ace_guard"], "u1_code": st["u1_code"], "real_nozzles": st["real_nozzles"],
-                        "auto_pipeline": st["auto_pipeline"]})
+                        "auto_pipeline": st["auto_pipeline"], "lang": st["lang"], "lang_now": ui_lang()})
             _GUARD.ensure()
             return
         if cmd == "prefs_set":
@@ -2892,6 +3381,9 @@ class AcePanelController:
                 st["ace_guard"] = message["ace_guard"]
             if isinstance(message.get("u1_code"), bool):
                 st["u1_code"] = message["u1_code"]
+            if message.get("lang") in LANGS:
+                st["lang"] = message["lang"]
+                _LANG["v"] = None
             if isinstance(message.get("auto_pipeline"), bool):
                 st["auto_pipeline"] = message["auto_pipeline"]
                 _PIPE["status"] = None
@@ -3033,6 +3525,10 @@ class AcePanelController:
                                        manual=load_settings()["real_nozzles"])
                 try:
                     msg["pipe"] = pipeline_status()
+                except Exception:
+                    pass
+                try:
+                    msg["calib"] = path_calibration(client)
                 except Exception:
                     pass
                 self._post(msg)
@@ -3585,9 +4081,9 @@ class GuardRunner:
                 ui = orca.host.ui
                 level = getattr(ui.NotificationLevel, "WarningNotificationLevel")
                 if ask is not None:
-                    ui.push_notification(level, text, "Relancer le séchage", lambda a=ask: self.redo_dry(a) or True)
+                    _notify(ui, level, text, "Relancer le séchage", lambda a=ask: self.redo_dry(a) or True)
                 else:
-                    ui.push_notification(level, text)
+                    _notify(ui, level, text)
             except Exception:
                 pass
 
@@ -3660,9 +4156,9 @@ class AcePanel(orca.script.ScriptPluginCapabilityBase):
 
     def execute(self):
         try:
-            return orca.ExecutionResult.success(_PANEL.open(force=True))
+            return _ok(_PANEL.open(force=True))
         except Exception as e:
-            return orca.ExecutionResult.skipped("Ouverture du panneau impossible : %s" % e)
+            return _skip("Ouverture du panneau impossible : %s" % e)
 
 
 PIPELINE_NAME = "multiACE : envoyer au Preflight"
@@ -3810,15 +4306,15 @@ class ResendLast(orca.script.ScriptPluginCapabilityBase):
         info = last_gcode_info()
         gcode_path, _ = last_gcode_paths()
         if not info or not os.path.exists(gcode_path):
-            return orca.ExecutionResult.skipped("Aucun G-code garde pour l'instant.")
+            return _skip("Aucun G-code garde pour l'instant.")
         host = load_settings()["host"]
         try:
             MultiAce(host).send_gcode(gcode_path, info.get("name"))
         except PermissionError:
-            return orca.ExecutionResult.skipped(permission_text(host))
+            return _skip(permission_text(host))
         except Exception as e:
-            return orca.ExecutionResult.skipped("Envoi impossible : %s" % e)
-        return orca.ExecutionResult.success("\"%s\" envoye au Preflight de %s." % (info.get("name"), host))
+            return _skip("Envoi impossible : %s" % e)
+        return _ok("\"%s\" envoye au Preflight de %s." % (info.get("name"), host))
 
 
 # --------------------------------------------------------------------------- enregistrement

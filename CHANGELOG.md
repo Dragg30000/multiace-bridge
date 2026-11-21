@@ -4,6 +4,48 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (2 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.38.0 (21/11/2026)
+- **« Optimisé » n'est plus grisé avec multiACE 1.90.** En 1.90, multiACE ne calcule « Optimisé » qu'avec les bobines déjà en place (sinon : « impossible avec les bobines chargées »). Dans ce cas, le plugin redemande au même code de la U1 sa proposition de disposition (son mode « loadout suggestion », celui de la 1.27b). La fenêtre affiche à nouveau la carte « Plan Optimisé : N échanges au lieu de M en déplaçant X bobines », les étapes dans l'ordre avec « C'est fait » et la grille « Disposition finale ». Le lancement attend que les bobines soient en place ; après « Recharger », c'est le plan de la U1 avec tes bobines qui est imprimé. Le plugin n'a toujours aucune logique d'attribution.
+- **Le premier export d'une nouvelle copie du plugin ouvrait le Preflight de multiACE** (par exemple après « Install local plugin »). OrcaSlicer refuse l'accès aux fichiers tant que tu n'as pas répondu à sa demande d'autorisation « open » : le plugin attend maintenant ta réponse (3 min au plus) au lieu de partir dans le Preflight de multiACE.
+- Tests : v037_test.py (51 vérifications), 19 tests OK.
+
+## 0.37.1
+- Version interne, regroupée dans la 0.38.0.
+
+## 0.37.0 (21/11/2026)
+- **Filaments 5 et plus (outils virtuels multiACE 1.90).** Carte « Avant de trancher » : nouvelle section « Filaments 5 et plus » qui lit la table « Slicer filament → MMU / Slot » de multiACE (Config), ou sa formule par défaut (filament 5 = MMU 1 slot 1, 9 = MMU 2 slot 1…). Pour chaque filament : slot visé, tête, buse, et si la bobine de ce slot a la bonne couleur (⚠ slot vide, autre couleur, ACE absent). Cette table sert quand le fichier est imprimé tel quel ; avec le Preflight, la U1 réattribue par couleur. Avec multiACE 1.27b (sans outils virtuels) : comme avant.
+- **« Disposition finale » : bouton « C'est fait » à chaque étape.** Quand tu as déplacé une bobine à la main, un clic fait suivre son identité dans le nouveau slot : couleur / matière / marque (étiquette du slot, comme le sélecteur de multiACE), l'ancienne étiquette est retirée, la bobine de la table multiACE (poids, PA) est réassociée. Une bobine RFID se relit seule. Refusé si le slot d'arrivée est vide ou pendant une impression. Quand toutes les étapes sont faites, la fenêtre se recharge toute seule.
+- **« Mettre dans la file multiACE »** (Print Hub, multiACE 1.90) : le fichier préparé par la U1 est déposé dans sa file au lieu d'être lancé (même chemin que le Preflight de multiACE : dossier `multiace_queue`, puis `/api/queue` avec les slots utilisés et l'estimation). Tu le lances depuis multiACE ; la U1 revérifie les bobines au lancement. Bouton absent si la U1 n'a pas de file.
+- **Panneau : « chemin non calibré »** sur chaque slot dont le chemin (Bowden) n'est pas calibré, avec la même règle que multiACE (valeurs enregistrées pour le slot ou son ACE, jamais la valeur globale). Lecture seule de la config ; la calibration se fait dans multiACE → Config → Calibration (le plugin ne la lance pas).
+- Format de la file vérifié contre le vrai serveur multiACE 1.90. Nouveau test v037_test.py (43 vérifications) ; 19 tests OK.
+
+## 0.36.1 (21/11/2026)
+- Fenêtre « Preflight de la U1 » : la version de multiACE s'affiche (« code multiACE de ta U1 (version 1.90+…) »). Elle était cherchée au mauvais endroit et restait vide ; elle est lue dans `/api/version`, comme l'interface de multiACE (1.27b et 1.90).
+- Premier essai réel en multiACE+ 1.90 : impression lancée depuis la fenêtre, estimation de la U1 identique à son Preflight web (42 min), un seul filament affiché, chargement automatique de T1 confirmé.
+- Tests : u1full_test.py (50 vérifications). 18 tests OK.
+
+## 0.36.0 (21/11/2026)
+- **Estimation de temps de la U1** (multiACE+ 1.90) dans la fenêtre « Preflight de la U1 » : durée totale de chaque plan à côté de son nom (« ≈ 20 h 42 »), et un compteur « durée estimée par la U1 · dont 9 h 32 d'échanges · purge 47 g ». C'est le calcul de multiACE, appris sur la durée réelle de tes échanges. Rien n'est affiché avec multiACE 1.27b, qui ne le fournit pas.
+- **Buses Haut débit / Standard lues dans les données de multiACE** (1.90 : envoyées avec le chargement) : l'alerte des buses utilise la même source que multiACE. Sinon, comme avant : lues dans la U1, puis le réglage « Ma U1 ».
+- **Plans impossibles expliqués en clair** : « impossible avec les bobines chargées », « aucune répartition par couche possible », « plus de 4 couleurs dans une couche »… au lieu du message anglais de multiACE.
+- Tests : u1full_test.py (49 vérifications). 18 tests OK avec multiACE 1.90 et 1.27b.
+
+## 0.35.7 (21/11/2026)
+- **Compatible multiACE+ 1.90** (sortie le 21/11/2026), toujours compatible 1.27b. Vérifié sur le vrai code des deux versions : le Preflight de la U1 (rapport, fichier préparé, bobines imposées, options au lancement), les commandes du panneau (charger, échanger, décharger, sécher, calibrer, éditer une bobine) et leurs paramètres sont identiques.
+- multiACE 1.90 répond `{"klippy": "disconnected"}` pendant un redémarrage de Klipper : le panneau affiche « Klipper n'est pas prêt… » et le garde-fou n'en conclut rien sur les ACE (avant, un état sans ACE aurait pu être pris pour une déconnexion).
+- Tests : les 18 tests passent avec multiACE 1.90 et 1.27b ; u1full_test.py (46 vérifications).
+
+## 0.35.6 (21/11/2026)
+- **Fenêtre « Preflight de la U1 » : seuls les filaments vraiment imprimés sont affichés.** Le code multiACE analyse tous les filaments déclarés dans le projet Orca, même ceux qui ne servent pas (exemple : un projet à 7 filaments où une seule couleur est imprimée). Ils n'apparaissent plus dans le tableau, le choix des bobines, les alertes de buse, les têtes chargées au départ, le PA par tête ni la disposition finale. Une ligne indique combien sont masqués. Filament utilisé = poids > 0 ou outil appelé dans le G-code. Rien ne change dans le calcul de la U1.
+- Tests : u1full_test.py (44 vérifications). 18 tests OK.
+
+## 0.35.5 (21/11/2026)
+- **Interface en anglais.** Nouveau choix dans ⚙ Options : « Langue / Language » = Auto (Windows), Français ou English. En automatique, le plugin suit la langue de Windows (français si Windows est en français, anglais sinon). OrcaSlicer ne donne pas sa langue aux plugins, d'où ce choix.
+  - Tout est traduit à l'affichage : panneau, options, fenêtre « Preflight de la U1 », fenêtre multiACE, messages, notifications d'Orca et résultats des étapes. Les valeurs (bobines, couleurs, buses Haut débit / Standard…) restent les mêmes en interne : rien ne change dans ce qui est envoyé à la U1.
+  - Le nom de l'étape « multiACE : envoyer au Preflight » n'est jamais traduit (c'est son identifiant dans les profils).
+  - Après un changement de langue : ferme et rouvre le panneau, ou redémarre OrcaSlicer.
+- Tests : u1full_test.py (41 vérifications, dont la langue), harness. 18 tests OK.
+
 ## 0.35.4 (21/11/2026)
 - **Étape « multiACE : envoyer au Preflight » ajoutée toute seule au profil de traitement** quand l'imprimante est une U1 (au démarrage, à l'ouverture d'un projet, puis contrôlée par le panneau toutes les 10 s). L'ancienne version attendait un événement « profil choisi » qu'OrcaSlicer 2.5 n'envoie jamais : elle ne s'ajoutait donc jamais. Les autres plugins du profil sont gardés ; les profils d'une autre imprimante (P1S…) ne sont jamais touchés. OrcaSlicer ne permet pas à un plugin d'enregistrer un profil : il passe en « modifié », enregistre-le (disquette) pour garder l'étape. Option ⚙ « Ajouter l'étape Preflight aux profils de la U1 ».
 - **Bonne copie du plugin** : ⚙ Options affiche « ✓ Étape Preflight présente dans « profil » » et « Dernier export préparé par cette copie (vX) », ou ⚠ si le dernier export est passé par une autre copie (copie locale + copie Orca Cloud).

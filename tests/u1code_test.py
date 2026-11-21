@@ -26,7 +26,8 @@ class H(http.server.BaseHTTPRequestHandler):
         if self.path.endswith("/preflight/livedata"):
             if MODE["live"] == "manual": return self._j(409, {"detail": "manual head"})
             return self._j(200, LIVE)
-        if self.path.endswith("/state"): return self._j(200, {"version": "test", "printer_state": "ready", "aces": [], "toolheads": []})
+        if self.path.endswith("/state"): return self._j(200, {"printer_state": "ready", "aces": [], "toolheads": []})
+        if self.path.endswith("/version"): return self._j(200, {"web": "1.90-test"})
         self._j(404, {})
     def do_POST(self):
         n = int(self.headers.get("Content-Length") or 0); data = self.rfile.read(n); UP.append((self.path, data)); self._j(200, {"ok": True})
