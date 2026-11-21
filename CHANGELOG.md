@@ -4,6 +4,11 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (2 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.38.1 (21/11/2026)
+- **« Disposition finale » : couleur qu'aucune bobine chargée n'a.** Premier essai réel (Grinch, filament 5 vert absent des ACE) : le plugin demandait de déplacer la bobine marron (que la U1 n'avait associée que par « même matière, autre couleur ») à la place du vert. Maintenant, seule une bobine dont la U1 a reconnu la couleur est déplacée ; pour une couleur absente, l'étape devient « Retire Bleu de ACE 1 · slot 4, puis pose une bobine Vert PLA (filament 5, pas dans les ACE) dans ACE 1 · slot 4 », avec son « C'est fait » qui donne au slot la couleur et la matière du filament. Le titre l'indique (« en déplaçant 4 bobine(s) et posant 1 bobine(s) hors des ACE ») et la grille marque « à poser ».
+- Premier essai réel de la 0.38.0 sur multiACE+ 1.90 : « Optimisé » proposé (33 échanges au lieu de 97, 13 h 24 au lieu de 16 h 20), file multiACE OK (« Loadout matches - ready to launch »).
+- Tests : v037_test.py (61 vérifications), 19 tests OK.
+
 ## 0.38.0 (21/11/2026)
 - **« Optimisé » n'est plus grisé avec multiACE 1.90.** En 1.90, multiACE ne calcule « Optimisé » qu'avec les bobines déjà en place (sinon : « impossible avec les bobines chargées »). Dans ce cas, le plugin redemande au même code de la U1 sa proposition de disposition (son mode « loadout suggestion », celui de la 1.27b). La fenêtre affiche à nouveau la carte « Plan Optimisé : N échanges au lieu de M en déplaçant X bobines », les étapes dans l'ordre avec « C'est fait » et la grille « Disposition finale ». Le lancement attend que les bobines soient en place ; après « Recharger », c'est le plan de la U1 avec tes bobines qui est imprimé. Le plugin n'a toujours aucune logique d'attribution.
 - **Le premier export d'une nouvelle copie du plugin ouvrait le Preflight de multiACE** (par exemple après « Install local plugin »). OrcaSlicer refuse l'accès aux fichiers tant que tu n'as pas répondu à sa demande d'autorisation « open » : le plugin attend maintenant ta réponse (3 min au plus) au lieu de partir dans le Preflight de multiACE.
