@@ -9,6 +9,8 @@
 
 <p align="center"><img src="presentation/banner.png" alt="multiACE Bridge" width="820"></p>
 
+<p align="center">▶️ <a href="presentation/multiACE_Bridge_demo.mp4"><b>Watch the 40-second demo</b></a></p>
+
 <p align="center"><a href="https://ko-fi.com/dragg"><img src="https://img.shields.io/badge/Ko--fi-Support%20Dragg-ff5e5b?logo=ko-fi&logoColor=white" alt="Support Dragg on Ko-fi"></a></p>
 <p align="center"><sub>The plugin is free. If it helps you, a tip on Ko-fi is welcome — and please support <a href="https://github.com/decay71/multiACE">multiACE by decay71</a> too, it does all the real work.<br>Le plugin est gratuit. S'il vous rend service, un pourboire sur Ko-fi fait plaisir — et pensez aussi à soutenir multiACE de decay71.</sub></p>
 
