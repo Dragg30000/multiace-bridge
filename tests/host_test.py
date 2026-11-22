@@ -4,7 +4,7 @@ S = tempfile.mkdtemp()
 sys.modules["orca"] = types.SimpleNamespace(pages=types.SimpleNamespace(PagesPluginCapabilityBase=object),
   slicing=types.SimpleNamespace(SlicingPipelineCapabilityBase=object), script=types.SimpleNamespace(ScriptPluginCapabilityBase=object),
   base=object, plugin=lambda c: c, host=types.SimpleNamespace(plugin=types.SimpleNamespace(storage=lambda: S)))
-spec = importlib.util.spec_from_file_location("mb", "/home/claude/multiace_bridge/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(spec); spec.loader.exec_module(mb)
+spec = importlib.util.spec_from_file_location("mb", "/home/claude/prive/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(spec); spec.loader.exec_module(mb)
 ok = lambda c, m: print(("PASS " if c else "FAIL ") + m) or (c or sys.exit(1))
 class H(http.server.BaseHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -25,7 +25,7 @@ open("host.html", "w").write(mb.PANEL.replace("__VERSION__", mb.VERSION).replace
 from playwright.sync_api import sync_playwright
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path="/usr/bin/google-chrome")
-    pg = b.new_page(viewport={"width": 330, "height": 600}); pg.goto("file:///home/claude/multiace_bridge/test/host.html"); pg.wait_for_timeout(200)
+    pg = b.new_page(viewport={"width": 330, "height": 600}); pg.goto("file:///home/claude/prive/test/host.html"); pg.wait_for_timeout(200)
     send = lambda m: pg.evaluate("m=>window.__h.forEach(f=>f(m))", m)
     send({"command": "prefs", "host": "", "screen": "off", "compact": False})
     ok(pg.is_visible("#hostbox") and "introuvable" in pg.inner_text("#hostTitle"), "pas d'adresse -> boîte affichée")

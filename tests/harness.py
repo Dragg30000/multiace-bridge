@@ -103,7 +103,7 @@ sys.modules["orca"] = orca
 
 # load plugin from inside a fake orca_plugins dir so _data_dir() works
 plugdir = os.path.join(DATA, "orca_plugins", "multiace"); os.makedirs(plugdir)
-src = os.path.join(plugdir, "multiace_bridge_any.py"); shutil.copy("/home/claude/multiace_bridge/multiace_bridge_any.py", src)
+src = os.path.join(plugdir, "multiace_bridge_any.py"); shutil.copy("/home/claude/prive/multiace_bridge_any.py", src)
 spec = importlib.util.spec_from_file_location("mb", src); mb = importlib.util.module_from_spec(spec); spec.loader.exec_module(mb)
 
 def wait(cap, n, t=5):

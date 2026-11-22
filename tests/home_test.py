@@ -1,7 +1,7 @@
 import sys, types, tempfile, importlib.util, json
 S = tempfile.mkdtemp()
 sys.modules["orca"] = types.SimpleNamespace(pages=types.SimpleNamespace(PagesPluginCapabilityBase=object), slicing=types.SimpleNamespace(SlicingPipelineCapabilityBase=object), script=types.SimpleNamespace(ScriptPluginCapabilityBase=object), base=object, plugin=lambda c: c, host=types.SimpleNamespace(plugin=types.SimpleNamespace(storage=lambda: S)))
-sp = importlib.util.spec_from_file_location("mb", "/home/claude/multiace_bridge/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(sp); sp.loader.exec_module(mb)
+sp = importlib.util.spec_from_file_location("mb", "/home/claude/prive/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(sp); sp.loader.exec_module(mb)
 body = json.dumps({"detail": json.dumps({"error": {"code": 400, "message": "Must home Z axis first: 44.200 250.000 277.000 [-10.000]", "traceback": "Traceback (most recent call last):\n File x"}})})
 m = mb.error_message(body); print(m)
 assert m.startswith("Must home Z axis first") and "Traceback" not in m

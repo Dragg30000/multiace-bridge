@@ -9,54 +9,50 @@
 
 <p align="center"><img src="presentation/banner.png" alt="multiACE Bridge" width="820"></p>
 
-<p align="center"><a href="presentation/multiACE_Bridge_demo.mp4"><img src="presentation/multiACE_Bridge_demo.gif" alt="multiACE Bridge demo" width="480"></a><br><sub>▶️ <a href="presentation/multiACE_Bridge_demo.mp4">Full-quality video (MP4)</a></sub></p>
+<p align="center"><a href="presentation/multiACE_Bridge_demo.mp4"><img src="presentation/multiACE_Bridge_demo.gif" alt="multiACE Bridge demo" width="480"></a><br><sub>▶️ <a href="presentation/multiACE_Bridge_demo.mp4">Full-quality video (MP4)</a>, previous interface</sub></p>
 
 <p align="center"><a href="https://ko-fi.com/dragg"><img src="https://img.shields.io/badge/Ko--fi-Support%20Dragg-ff5e5b?logo=ko-fi&logoColor=white" alt="Support Dragg on Ko-fi"></a></p>
 <p align="center"><sub>The plugin is free. If it helps you, a tip on Ko-fi is welcome — and please support <a href="https://github.com/decay71/multiACE">multiACE by decay71</a> too, it does all the real work.<br>Le plugin est gratuit. S'il vous rend service, un pourboire sur Ko-fi fait plaisir — et pensez aussi à soutenir multiACE de decay71.</sub></p>
 
 ## Features / Fonctions
 
+New interface in 0.42: one lanes map for 1 to 4 ACEs, a print window that shows the U1's plans side by side, and warnings when a colour will not print as in your project. / Nouvelle interface en 0.42 : une carte des voies pour 1 à 4 ACE, une fenêtre qui montre les plans de la U1 côte à côte, et un avertissement quand une couleur ne sortira pas comme dans le projet.
+
 <table>
 <tr>
-<td width="33%" valign="top"><img src="presentation/readme/01_panneau_haut.png" width="240"><br><b>Live panel</b><br>Heads, ACEs, real spool colours, remaining weight, actions in a queue.</td>
-<td width="33%" valign="top"><img src="presentation/readme/11_ace_sechage.png" width="240"><br><b>Humidity, temperature, drying</b><br>Per ACE, with progress and time left.</td>
-<td width="33%" valign="top"><img src="presentation/readme/05_mode_reduit.png" width="240"><br><b>Compact mode</b><br>All spool colours in a few rows, actions on click.</td>
-</tr>
-<tr>
-<td valign="top"><img src="presentation/readme/09_avant_de_trancher.png" width="240"><br><b>Before slicing</b><br>Reads the nozzles fitted on the U1 (Standard / High Flow) and tells you what to set in Orca.</td>
-<td valign="top"><img src="presentation/readme/10_garde_fou.png" width="240"><br><b>ACE guard</b><br>Restarts drying and filament feed after an ACE USB dropout.</td>
-<td valign="top"><img src="presentation/readme/08_camera.png" width="240"><br><b>U1 camera and screen</b><br>In the panel, at the top, bottom or hidden.</td>
-</tr>
-<tr>
-<td valign="top"><img src="presentation/readme/03_editeur.png" width="240"><br><b>Spool editor</b><br>Works without RFID, linked to the multiACE spool table; PA calibration per spool.</td>
-<td valign="top"><img src="presentation/readme/16_options.png" width="240"><br><b>⚙ Options and U1 address</b><br>Starts with Orca; a box opens if the U1 can't be found.</td>
-<td valign="top"><img src="presentation/readme/17_adresse.png" width="240"><br><b>Address box</b><br>Enter or fix the U1 IP; checked before it is saved.</td>
+<td width="38%" valign="top"><img src="presentation/readme/panel_map.png" width="300"><br><b>Live panel: lanes map</b><br>The 4 heads on top, one row per ACE. Solid line: spool loaded in the head. Dotted line: load queued. Orange diamond: path not calibrated in multiACE. Humidity, temperature and drying per ACE.</td>
+<td width="62%" valign="top"><img src="presentation/readme/panel_spool.png" width="300"><br><b>Click a spool or a head</b><br>Load, swap, unload, calibrate the flow (PA), edit colour and material (works without RFID, linked to the multiACE spool table). Actions run one after another in a queue, with auto homing.</td>
 </tr>
 </table>
 
 ### Export with your U1's own Preflight
 
-<p align="center"><img src="presentation/images/18_preflight_u1.png" width="620"></p>
+<p align="center"><img src="presentation/readme/window_plans.png" width="760"></p>
 
 On export, the plugin runs **the Preflight code served by your U1** (your multiACE version) inside Orca, after checks: the U1 decides, the plugin shows, applies your choices and checks. If anything doesn't match, nothing is run and the original G-code goes to multiACE's Preflight instead. The plugin has no assignment logic of its own and never changes your export.
 
-- **U1 plans** (as sliced / optimized / per layer) with tool changes and spool swaps.
+- **U1 plans side by side** (as sliced / optimized / per layer): time, swaps, purge, and one bar per head along the print, where each colour change is a spool swap.
+- **Optimized plan with spools to move**: the U1 code proposes a layout. Follow it **step by step**, one move at a time with an arrow on the map and a **“Done”** button (colour, material and spool entry follow the spool). If the spool feeds a loaded head, an **“Unload Tn”** button is right there. Printing waits until everything is in place. The U1's layout is also asked for when a head has no spool of the right material in its lane.
+
+<p align="center"><img src="presentation/readme/placement.png" width="760"></p>
+
+- **Colours that differ from your project**: the window says which filament will print in which colour, on each plan, on the map and next to the print button. Nothing is blocked. When the optimized plan gives the right colours, one click switches to it; otherwise the window tells you what to fetch and where to put it.
+
+<p align="center"><img src="presentation/readme/colour_warning.png" width="760"></p>
+<p align="center"><img src="presentation/readme/what_to_place.png" width="620"></p>
+
+- **Empty head at start**: the U1's own start sequence can stop on an empty head (error 523) before multiACE loads it, so the window offers **“Load Tn from ACE x, lane y”**.
+
+<p align="center"><img src="presentation/readme/empty_head.png" width="420"></p>
+
 - **High flow / Standard nozzle warning**: with multiACE the slot decides the head, so a colour can land on another nozzle type; the window tells you.
 - **Force a spool** per filament, passed as is to the U1 code (same as a manual edit in multiACE's web Preflight).
 - **Print start**: bed mesh limited to the printed area, flow (PA) calibration per head, stored PA per spool with “Calibrate before”, soft travel to the purge line, time-lapse.
-- **Optimized / per-layer plans**: when the loaded spools don't fit, the U1 code's own layout suggestion is shown (multiACE 1.27b and 1.90): steps in order with a **“Done”** button each (the spool's colour, material and multiACE table entry follow it into its new slot), a **final layout** grid; printing waits until the spools are in place.
-- **U1 time estimate** (multiACE 1.90): total time, swap time and purge per plan.
-- **Put in the multiACE queue** (multiACE 1.90 Print Hub): the prepared file waits in multiACE's queue; the U1 checks the spools again at launch.
-- **Send to the U1 without printing**.
+- **U1 time estimate** (multiACE 1.90), **put in the multiACE queue** (multiACE 1.90 Print Hub), **send to the U1 without printing**.
 - **Filaments 5 and up** (multiACE 1.90 virtual tools): the “Before slicing” card shows multiACE's *Slicer filament → MMU / Slot* table and whether each slot holds the right colour.
-- Panel: **“path not calibrated”** badge on slots whose Bowden path isn't calibrated in multiACE (Config → Calibration).
-- The **pipeline step is added to your U1 process preset automatically** (save the preset to keep it).
+- Also in the panel: **before slicing** (nozzles fitted on the U1 and what to set in Orca), **ACE guard** (restarts drying and feed after an ACE USB dropout), **U1 camera and screen**, **compact mode**, **⚙ Options**, **U1 address box**, and the **pipeline step added to your U1 process preset** automatically (save the preset to keep it).
 
-<p align="center"><img src="presentation/images/18b_forcer_bobine.png" width="620"></p>
-
-<p align="center"><img src="presentation/images/19_disposition_finale.png" width="620"></p>
-
-Full presentation: [EN slides](presentation/multiACE_Bridge_slides_EN.pdf) · [diaporama FR](presentation/multiACE_Bridge_diaporama_FR.pdf) · guides in [docs/](docs/).
+Full presentation (before the 0.42 interface): [EN slides](presentation/multiACE_Bridge_slides_EN.pdf), [diaporama FR](presentation/multiACE_Bridge_diaporama_FR.pdf), guides in [docs/](docs/). French screenshots of 0.42: [presentation/images](presentation/images) (20 to 27).
 Interface in French or English (⚙ Options → Language).
 
 ## Install / Installation
@@ -84,5 +80,6 @@ Bêta fournie **telle quelle, sans garantie**. **À vos risques et périls.**
 
 - **decay71** and the multiACE contributors: [decay71/multiACE](https://github.com/decay71/multiACE) (GPL-3.0). The export runs the Preflight code served by multiACE, as its author asked (issue #243), and falls back to “Send to multiACE”.
 - The **OrcaSlicer** team for the plugin system, and **paxx** for the firmware.
+- Fonts: modified versions of **Hubot Sans** and **Mona Sans** by GitHub (SIL Open Font License 1.1), subset and renamed “MB Display” and “MB Text”, embedded in the plugin. See [OFL.txt](OFL.txt).
 
-License: GPL-3.0. — Dragg with his friend Claude
+License: GPL-3.0 (fonts: SIL OFL 1.1, see OFL.txt). — Dragg with his friend Claude

@@ -4,7 +4,7 @@ STORE = tempfile.mkdtemp()
 sys.modules["orca"] = types.SimpleNamespace(pages=types.SimpleNamespace(PagesPluginCapabilityBase=object),
   slicing=types.SimpleNamespace(SlicingPipelineCapabilityBase=object), script=types.SimpleNamespace(ScriptPluginCapabilityBase=object),
   base=object, plugin=lambda c: c, host=types.SimpleNamespace(plugin=types.SimpleNamespace(storage=lambda: STORE)))
-spec = importlib.util.spec_from_file_location("mb", "/home/claude/multiace_bridge/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(spec); spec.loader.exec_module(mb)
+spec = importlib.util.spec_from_file_location("mb", "/home/claude/prive/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(spec); spec.loader.exec_module(mb)
 ok = lambda c, m: print(("PASS " if c else "FAIL ") + m) or (c or sys.exit(1))
 HD, ST = "Haut débit", "Standard"
 # reponse reelle d'une U1 (firmware avec nozzle_volume_type), champs utiles seulement
@@ -67,9 +67,9 @@ with sync_playwright() as p:
     pg = b.new_page(viewport={"width": 320, "height": 700}); pg.goto("file://" + os.path.abspath("u1noz.html")); pg.wait_for_timeout(200)
     pg.evaluate("m=>window.__h.forEach(f=>f(m))", {"command": "state", "state": state, "prep": dict(adv, real=real, real_src="u1", manual=["", "", "", ""])})
     t = pg.inner_text("#prep")
-    ok("T2 STANDARD" in t and "lues dans la U1" in t, "carte : conseils + « lues dans la U1 »")
+    ok("T2 Standard" in t and "lues dans la U1" in t, "carte : conseils + « lues dans la U1 »")
     pg.click("text=Ma U1")
-    ok("Lues dans la U1 : T1 Haut débit · T2 Haut débit · T3 Standard · T4 Haut débit" in pg.inner_text("#prep") and pg.locator("#prep select").count() == 0, "aucune saisie demandée quand la U1 répond")
+    ok("Lues dans la U1 : T1 Haut débit, T2 Haut débit, T3 Standard, T4 Haut débit" in pg.inner_text("#prep") and pg.locator("#prep select").count() == 0, "aucune saisie demandée quand la U1 répond")
     pg.screenshot(path="v260_u1.png", clip={"x": 0, "y": 0, "width": 320, "height": 260})
     b.close()
 print("ALL OK")

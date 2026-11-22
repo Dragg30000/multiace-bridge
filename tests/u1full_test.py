@@ -1,6 +1,6 @@
 """0.35 : fenetre U1 complete (bobines imposees, buses, PA, maillage zone, envoi sans lancer)."""
 import sys, re, json, time, tempfile, shutil
-exec(open("/home/claude/multiace_bridge/test/u1code_test.py").read().split("plans = {k")[0])
+exec(open("/home/claude/prive/test/u1code_test.py").read().split("plans = {k")[0])
 # --- infos du fichier
 info = mb.slice_info(g)
 ok(info["order"][:2] == [0, 1] and len(info["sliced"]) == 5 and info["sliced"][4]["head"] == 0, "ordre d'utilisation et tête tranchée par filament : %s" % info["order"])
@@ -128,8 +128,9 @@ from playwright.sync_api import sync_playwright
 with sync_playwright() as p_:
     b_ = p_.chromium.launch(executable_path="/usr/bin/google-chrome"); pg_ = b_.new_page(viewport={"width": 1100, "height": 900})
     pg_.goto("file:///home/claude/testdata/one.html"); pg_.wait_for_timeout(300)
-    nrows = pg_.locator("table:not(.grid) tr").count() - 1; txt = pg_.inner_text("body"); b_.close()
-ok(nrows == 1 and "4 filament(s) du projet non utilisé(s)" in txt and "⚠ Filament" not in txt, "un seul filament utilisé : une ligne, pas d'alerte parasite (%d ligne(s))" % nrows)
+    pg_.click("#fo"); pg_.wait_for_timeout(100)
+    nrows = pg_.locator(".ftab .frow").count(); txt = pg_.inner_text("body"); b_.close()
+ok(nrows == 1 and "4 filament(s) du projet non utilisé(s)" in txt and "tranché pour une buse" not in txt, "un seul filament utilisé : une ligne, pas d'alerte parasite (%d ligne(s))" % nrows)
 mb._LANG["v"] = None
 # --- 0.35.7 : multiACE 1.90, Klipper qui redemarre
 real_get2 = mb.MultiAce.get_json
@@ -154,7 +155,7 @@ html = mb.U1_PAGE.replace("__DATA__", json.dumps(d).replace("</", "<\\/")); open
 with sync_playwright() as p_:
     b_ = p_.chromium.launch(executable_path="/usr/bin/google-chrome"); pg_ = b_.new_page(viewport={"width": 1100, "height": 900})
     pg_.goto("file:///home/claude/testdata/est.html"); pg_.wait_for_timeout(300); txt = pg_.inner_text("body"); b_.close()
-ok(est.get("total_s") and "durée estimée par la U1" in txt and "≈ " in txt, "estimation de la U1 affichée quand elle existe (%s s)" % est.get("total_s"))
+ok(est.get("total_s") and "Durée" in txt and re.search(r"\d+h\d\d", txt), "estimation de la U1 affichée quand elle existe (%s s)" % est.get("total_s"))
 ok("loaded spools do not fit" not in txt and "no layer-feasible" not in txt, "raisons des plans en clair")
 LIVE["head_ctx"] = {"mode": "multi"}; mb._LANG["v"] = None
 # --- 0.36.1 : version de multiACE lue dans /api/version

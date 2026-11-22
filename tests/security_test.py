@@ -1,7 +1,7 @@
 import sys, types, tempfile, importlib.util
 S = tempfile.mkdtemp()
 sys.modules["orca"] = types.SimpleNamespace(pages=types.SimpleNamespace(PagesPluginCapabilityBase=object), slicing=types.SimpleNamespace(SlicingPipelineCapabilityBase=object), script=types.SimpleNamespace(ScriptPluginCapabilityBase=object), base=object, plugin=lambda c: c, host=types.SimpleNamespace(plugin=types.SimpleNamespace(storage=lambda: S)))
-sp = importlib.util.spec_from_file_location("mb", "/home/claude/multiace_bridge/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(sp); sp.loader.exec_module(mb)
+sp = importlib.util.spec_from_file_location("mb", "/home/claude/prive/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(sp); sp.loader.exec_module(mb)
 g = mb.gcode_safe
 assert g('SUNLU"\nG28; M112 #x*') == "SUNLU G28 M112 x", repr(g('SUNLU"\nG28; M112 #x*'))
 assert "\n" not in g("a\r\nb") and "\x00" not in g("a\x00b") and len(g("x" * 500)) == 40
@@ -17,14 +17,14 @@ print("SECURITY OK")
 
 # l'en-tete lu par OrcaSlicer (liste des plugins) doit porter la meme version que le panneau
 import re as _re
-_src = open("/home/claude/multiace_bridge/multiace_bridge_any.py", encoding="utf-8").read()
+_src = open("/home/claude/prive/multiace_bridge_any.py", encoding="utf-8").read()
 _h = _re.search(r'^# version = "([^"]+)"', _src, _re.M).group(1)
 _v = _re.search(r'^VERSION = "([^"]+)"', _src, _re.M).group(1)
 assert _h == _v, "en-tete %s != VERSION %s" % (_h, _v)
 print("VERSION OK", _v)
 
 # 0.34 : aucun code cache ; le seul code execute est le Preflight fourni par la U1, verifie avant
-_code = open("/home/claude/multiace_bridge/multiace_bridge_any.py", encoding="utf-8").read()
+_code = open("/home/claude/prive/multiace_bridge_any.py", encoding="utf-8").read()
 import re as _re
 for _bad in ("b64decode", "zlib", "marshal"):
     assert _bad not in _code, "code cache interdit : " + _bad
