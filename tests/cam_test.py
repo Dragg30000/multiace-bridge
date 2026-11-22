@@ -3,7 +3,7 @@ import http.server, io, os, sys, threading, types, importlib.util
 sys.modules["orca"] = types.SimpleNamespace(pages=types.SimpleNamespace(PagesPluginCapabilityBase=object),
   slicing=types.SimpleNamespace(SlicingPipelineCapabilityBase=object), script=types.SimpleNamespace(ScriptPluginCapabilityBase=object),
   base=object, plugin=lambda c: c)
-spec = importlib.util.spec_from_file_location("mb", "/home/claude/multiace_bridge/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(spec); spec.loader.exec_module(mb)
+spec = importlib.util.spec_from_file_location("mb", "/home/claude/prive/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(spec); spec.loader.exec_module(mb)
 ok = lambda c, m: print(("PASS " if c else "FAIL ") + m) or (c or sys.exit(1))
 from PIL import Image, ImageDraw
 im = Image.new("RGB", (640, 360), (30, 34, 40)); d = ImageDraw.Draw(im); d.rectangle((200, 120, 440, 260), fill=(141, 110, 99)); d.text((20, 20), "U1 camera", fill=(255, 255, 255))

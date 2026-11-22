@@ -4,7 +4,7 @@ STORE = tempfile.mkdtemp()
 sys.modules["orca"] = types.SimpleNamespace(pages=types.SimpleNamespace(PagesPluginCapabilityBase=object),
   slicing=types.SimpleNamespace(SlicingPipelineCapabilityBase=object), script=types.SimpleNamespace(ScriptPluginCapabilityBase=object),
   base=object, plugin=lambda c: c, host=types.SimpleNamespace(plugin=types.SimpleNamespace(storage=lambda: STORE)))
-spec = importlib.util.spec_from_file_location("mb", "/home/claude/multiace_bridge/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(spec); spec.loader.exec_module(mb)
+spec = importlib.util.spec_from_file_location("mb", "/home/claude/prive/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(spec); spec.loader.exec_module(mb)
 ok = lambda c, m: print(("PASS " if c else "FAIL ") + m) or (c or sys.exit(1))
 HD, ST = "Haut débit", "Standard"
 def slot(i, col):
@@ -78,7 +78,7 @@ with sync_playwright() as p:
     send({"command": "state", "state": state, "prep": dict(a, real=real)})
     t = pg.inner_text("#prep")
     cells = pg.locator("#prep .nc").all_inner_texts()
-    ok("Mets ça à gauche" in t and cells == ["T1 Haut débit", "T2 STANDARD ←", "T3 HAUT DÉBIT ←", "T4 Haut débit"], "grille comme le bloc Buse d'Orca : %s" % cells)
+    ok("Buse à régler dans Orca" in t and cells == ["T1 Haut débit", "T2 Standard", "T3 Haut débit", "T4 Haut débit"], "grille comme le bloc Buse d'Orca : %s" % cells)
     ok(pg.locator("#prep .nc.chg").count() == 2, "seules les 2 cases à changer en couleur")
     ok(not pg.is_visible("#prep select") and not pg.is_visible("text=Marron"), "détail et « Ma U1 » repliés")
     pg.click("text=Détail par filament"); pg.wait_for_timeout(150)

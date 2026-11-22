@@ -1,8 +1,37 @@
 # multiACE Bridge : journal des mises à jour
 
-Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (2 ACE).
+Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (1 à 4 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
+
+## 0.42.0 (22/11/2026)
+- **Nouvelle interface** du panneau et de la fenêtre « Preflight de la U1 ». Polices intégrées : rien n'est téléchargé.
+  - **Carte des voies**, la même avec 1 à 4 ACE en mode multi : les 4 têtes en haut, une ligne par ACE. Trait plein : bobine chargée dans la tête. Pointillé de couleur : chargement prévu par la file. Losange orange : chemin pas encore calibré dans multiACE.
+  - Clic sur une bobine ou une tête : charger, échanger, décharger, calibrer le débit, modifier. Séchage dans la bande de chaque ACE. File d'actions avec une barre de la couleur du filament.
+  - Fenêtre : les plans dans un tableau (durée, échanges, purge, écart avec « Comme tranché »), un ruban par tête (chaque changement de couleur est un échange de bobine), la carte des bobines du plan, « Au départ » à côté du lancement, autres actions dans le menu « ⋯ ».
+  - Mode tête (une ACE par tête) : rendu en liste gardé.
+- **Placer pas à pas** : un geste à la fois, avec une flèche sur la carte. Si la bobine du geste alimente une tête chargée : bouton « Décharger Tn » (file du panneau, jamais pendant une impression).
+- **Couleurs différentes du projet** : avertissement en haut de la fenêtre (« Rouge (filament 3) sera imprimé en Marron (ACE 2, voie 1) »), nombre sous chaque plan, repère « ! » et « remplace Rouge » sur la carte, rappel près du lancement. Rien n'est bloqué.
+  - Une bobine que multiACE rapproche par son nom de couleur approché est aussi signalée (un violet que multiACE appelle « Blue »).
+  - Quand le plan « Optimisé » donne les bonnes couleurs, l'avertissement propose « Choisir le plan Optimisé ». Ce plan ne réutilise plus une bobine d'une autre couleur : il demande de poser la bonne.
+  - Sinon, l'avertissement dit quoi poser et où : une voie vide qui débloque une tête, les autres voies vides, à la place d'une bobine non identifiée, d'une bobine pas utilisée, ou d'une bobine qui ne fait que remplacer une couleur. Un ACE que la U1 ne compte pas est signalé. Bouton « Recharger ».
+- **« Optimisé » impossible parce qu'une tête n'a aucune bobine de la matière dans sa voie** : le plugin redemande au code de la U1 sa proposition de disposition, comme pour « impossible avec les bobines chargées » (0.38.0).
+- **Tête vide au départ** : la fenêtre la signale avec un bouton « Charger Tn depuis ACE x, voie y » (file du panneau). Essai réel : avec T4 vide, la U1 s'est arrêtée au tout début (erreur 523, séquence de départ de la U1) avant que multiACE ne charge la tête.
+- **Éditeur de bobine** : choisir une bobine de la table multiACE notée dans une autre voie qui n'est pas vide est refusé tout de suite, en clair, sans rien enregistrer. Avant : erreur HTTP 400 de multiACE, et la couleur était enregistrée quand même.
+- Polices : versions modifiées de Hubot Sans et Mona Sans (GitHub, SIL Open Font License 1.1), réduites au latin et renommées « MB Display » et « MB Text » : voir `OFL.txt`.
+- Tests : 20 suites OK. Nouvelles : refonte_ui_test, refonte_window_test, couleurs_test, conseil_test, depart_test. ui_queue_test, mini_test, fold_test et pop_test testaient l'ancienne interface : retirées.
+
+## 0.40.1 (22/11/2026)
+- **En haut du panneau : le nom donné à la U1**, lu dans l'imprimante (le même que multiACE affiche en haut de son interface, « … · U1 »). Au survol : nom, firmware de la U1 et imprimante choisie dans Orca. Si la U1 ne donne pas de nom : celui de l'imprimante d'Orca.
+- Aperçu de l'animation de lancement : `presentation\animation_lancement.mp4` et `.gif`.
+
+## 0.40.0 (22/11/2026)
+- **Animation au lancement de l'impression** : quand tu lances depuis la fenêtre « Preflight de la U1 », la mascotte Mange-3MF mange le G-code (« nom nom », « CRUNCH! »), les bobines sautent, puis « Impression lancée ! Bon appétit, la U1 ! » avec le nom du fichier. 6 s environ, clic pour fermer ; image fixe si Windows est réglé sur « mouvements réduits ». Rien pour « Envoyer sans lancer » ni la file.
+- **En haut du panneau : le nom de l'imprimante** sélectionnée dans OrcaSlicer (au lieu de « ACE », déjà dans l'onglet « multiACE »), sur sa propre ligne, sans « (modified) ».
+
+## 0.39.1 (22/11/2026)
+- **« Optimisé » : la disposition revient quand les bobines en place n'ont pas les bonnes couleurs.** Avec multiACE 1.90, l'optimiseur peut tout faire tenir dans les bobines chargées en prenant d'autres couleurs (Brown → Rouge, Red → Bleu foncé…). Le plugin compare avec le choix de couleurs de la U1 (plan « Comme tranché ») ; si un filament imprimé tombe sur une autre couleur, il redemande à la U1 sa disposition (bonnes couleurs) et affiche à nouveau les étapes et la « Disposition finale ». La carte rappelle ce que la U1 ferait sans rien déplacer ; pour l'accepter, impose ces bobines.
+- Tests : v037_test.py (102 vérifications), 19 tests OK.
 
 ## 0.39.0 (22/11/2026)
 - **« Optimisé » et « Par couche » avec tes bobines imposées.** Imposer une bobine ne grise plus les autres plans : l'optimiseur de ta U1 les recalcule autour de ton choix. Ton choix lui est donné comme une contrainte de son propre format (le filament imposé ne peut aller que sur la tête de sa bobine, avec la couleur et la matière de cette bobine) ; la U1 décide de tout le reste. Chaque plan affiche ses échanges et sa durée « avec tes choix », ou « impossible avec tes choix ». À l'envoi, la disposition complète passe par le chemin des choix manuels de multiACE (comme « Comme tranché » avec bobines imposées) : test à l'appui, le fichier préparé est identique octet pour octet à celui du plan « Optimisé » de la U1 pour la même disposition. Avec multiACE 1.27b : comme avant (Comme tranché seulement).

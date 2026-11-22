@@ -9,7 +9,7 @@ sys.modules["orca"] = types.SimpleNamespace(pages=types.SimpleNamespace(PagesPlu
   slicing=types.SimpleNamespace(SlicingPipelineCapabilityBase=object), script=types.SimpleNamespace(ScriptPluginCapabilityBase=object),
   base=object, plugin=lambda c: c, host=types.SimpleNamespace(plugin=types.SimpleNamespace(storage=lambda: STORE), preset_bundle=lambda: bundle,
   preset=types.SimpleNamespace(bundles=types.SimpleNamespace(reload_local=lambda i: reloads.append(i)))))
-spec = importlib.util.spec_from_file_location("mb", "/home/claude/multiace_bridge/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(spec); spec.loader.exec_module(mb)
+spec = importlib.util.spec_from_file_location("mb", "/home/claude/prive/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(spec); spec.loader.exec_module(mb)
 ok = lambda c, m: print(("PASS " if c else "FAIL ") + m) or (c or sys.exit(1))
 ok(mb.remove_old_profile() is False and os.path.isdir(b), "not removed while it is the selected printer")
 cur["n"] = "Snapmaker U1 (0.4 nozzle)"

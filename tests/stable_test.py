@@ -4,7 +4,7 @@ open(os.path.join(STORE, "settings.json"), "w").write('{"host": "192.168.1.50"}'
 sys.modules["orca"] = types.SimpleNamespace(pages=types.SimpleNamespace(PagesPluginCapabilityBase=object),
   slicing=types.SimpleNamespace(SlicingPipelineCapabilityBase=object), script=types.SimpleNamespace(ScriptPluginCapabilityBase=object),
   base=object, plugin=lambda c: c, host=types.SimpleNamespace(plugin=types.SimpleNamespace(storage=lambda: STORE)))
-spec = importlib.util.spec_from_file_location("mb", "/home/claude/multiace_bridge/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(spec); spec.loader.exec_module(mb)
+spec = importlib.util.spec_from_file_location("mb", "/home/claude/prive/multiace_bridge_any.py"); mb = importlib.util.module_from_spec(spec); spec.loader.exec_module(mb)
 ok = lambda c, m: print(("PASS " if c else "FAIL ") + m) or (c or sys.exit(1))
 p = mb._settings_path()
 ok(p == os.path.join(DATA, "multiace_bridge", "settings.json") and mb.load_settings()["host"] == "192.168.1.50", "old settings migrated outside plugin folder")
