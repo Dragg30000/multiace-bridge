@@ -266,3 +266,100 @@ ok(ov and ov[0]["color"] == VE and ov[0]["material"] == "PLA" and (ov[0]["ace"],
 POSTS.clear(); W._newspool({"step": 4, "t": 4, "to_ace": 0, "to_slot": 0})
 ok(not POSTS and not sent[-1]["done"], "slot vide -> refusé")
 print("v0381 OK")
+
+# ---------- 0.38.3 : bobines imposees -> echanges et duree recalcules par le code de la U1
+LIVE["live_slots"] = [{"ace": 0, "slot": i, "material": "PLA", "color": c} for i, c in enumerate(["#eff0f1", "#000000", "#e02020", "#009639"])] + [{"ace": 1, "slot": i, "material": "PLA", "color": c} for i, c in [(1, "#f7d959"), (2, "#927968"), (3, "#ff8da1")]]
+rep, live, sha = mb.u1_report(c, g, "real.gcode")
+cap = mb._LAST_CAPTURE.get(g)
+pp_, core_, _ = mb.u1_code(c)
+sl = rep["plans"]["slicer"]
+same = mb.forced_estimate(core_, rep, cap, {}, rep["live_slots"])
+ok(same and same["swaps"] == sl["swaps"] and abs(same["estimate"]["total_s"] - sl["estimate"]["total_s"]) < 1, "sans choix : mêmes chiffres que la U1 (%s échanges)" % sl["swaps"])
+t0 = sl["mapping"][0]["t"]; cur = sl["mapping"][0]["slot"]; other = next(x for x in rep["live_slots"] if (x["ace"], x["slot"]) != (cur["ace"], cur["slot"]))
+fe = mb.forced_estimate(core_, rep, cap, {str(t0): other["ace"] * 4 + other["slot"]}, rep["live_slots"])
+ok(fe and fe["swaps"] != sl["swaps"] or fe["estimate"]["total_s"] != sl["estimate"]["total_s"], "bobine imposée : recalculé (%s échanges, %d s au lieu de %s, %d s)" % (fe["swaps"], fe["estimate"]["total_s"], sl["swaps"], sl["estimate"]["total_s"]))
+ok(mb.forced_estimate(core_, rep, cap, {str(t0): 31}, rep["live_slots"]) is None, "slot inconnu -> rien")
+W.report = rep; W.job = dict(W.job, path=g); posted = []
+W.window = types.SimpleNamespace(post=lambda d: posted.append(d))
+W._forced_est({"forced": {str(t0): other["ace"] * 4 + other["slot"]}, "key": "k1"})
+ok(posted and posted[-1]["type"] == "fest" and posted[-1]["key"] == "k1" and posted[-1]["res"]["swaps"] == fe["swaps"], "fenêtre : réponse « fest »")
+W.window = None
+D4 = {"name": "x.gcode", "report": rep, "labels": mb.PLAN_LABELS, "prefs": {}, "info": mb.slice_info(g), "load": {"slots": {}, "real": real, "dia": "0.4"}, "can_force": True}
+open("/home/claude/testdata/v0383.html", "w").write(mb.U1_PAGE.replace("<head>", "<head>" + fake, 1).replace("__DATA__", json.dumps(D4)))
+with sync_playwright() as p:
+    b = p.chromium.launch(executable_path="/usr/bin/google-chrome"); pg = b.new_page(viewport={"width": 1100, "height": 1300}); pg.goto("file:///home/claude/testdata/v0383.html"); pg.wait_for_timeout(300)
+    pg.locator("[data-pk]").first.click(); pg.wait_for_timeout(100)
+    pg.locator("[data-ch]:not([data-v=''])").nth(1).click(); pg.wait_for_timeout(100)
+    m = pg.evaluate("window.__p")[-1]
+    ok(m["a"] == "forced_est" and m["forced"], "choix d'une bobine -> demande de recalcul")
+    ok("calcul avec tes choix" in pg.inner_text(".stats"), "en attente : « calcul avec tes choix… »")
+    pg.evaluate("m=>window.__h.forEach(f=>f(m))", {"type": "fest", "key": m["key"], "res": {"swaps": 123, "estimate": {"total_s": 36000, "added_s": 3600}}}); pg.wait_for_timeout(100)
+    t = pg.inner_text(".stats")
+    ok("123" in t and "10 h" in t and "avec tes choix" in t, "chiffres « avec tes choix » affichés")
+    ok("123 échange(s)" in pg.inner_text(".plans"), "« Comme tranché » montre aussi 123 échanges")
+    b.close()
+print("v0383 OK")
+
+# ---------- 0.39.0 : « Optimisé » / « Par couche » avec tes bobines imposees (optimiseur de la U1)
+LIVE["live_slots"] = [{"ace": 0, "slot": i, "material": "PLA", "color": c} for i, c in enumerate(["#eff0f1", "#000000", "#e02020", "#009639"])] + [{"ace": 1, "slot": i, "material": "PLA", "color": c} for i, c in [(0, "#ffffff"), (1, "#f7d959"), (2, "#927968"), (3, "#ff8da1")]]
+rep, live, sha = mb.u1_report(c, g, "real.gcode")
+pp_, core_, _ = mb.u1_code(c)
+cap, calls = mb._LAST_CAPTURE.get(g), mb._LAST_CALLS.get(g)
+op = rep["plans"]["optimize"]
+ok(calls and set(calls) == {"optimize", "layer"} and op.get("feasible"), "arguments des plans de la U1 gardés (optimisé : %s échanges)" % op.get("swaps"))
+row = op["mapping"][0]; t = row["t"]; h = row["slot"]["slot"]
+alt = next(x for x in rep["live_slots"] if x["slot"] != h and x["material"] == "PLA")
+forced = {str(t): alt["ace"] * 4 + alt["slot"]}
+fp = mb.forced_plans(core_, calls, cap, forced, rep["live_slots"])
+fo = fp.get("optimize") or {}
+print("forcé", forced, "->", {k: (v.get("feasible"), v.get("swaps"), v.get("reason")) for k, v in fp.items()})
+if fo.get("feasible"):
+    r0 = next(r for r in fo["mapping"] if r["t"] == t)
+    ok((r0["slot"]["ace"], r0["slot"]["slot"], r0["tier"]) == (alt["ace"], alt["slot"], "manual"), "filament %d sur la bobine imposée (ACE %d · slot %d)" % (t + 1, alt["ace"] + 1, alt["slot"] + 1))
+    ok(fo["swaps"] >= op["swaps"] and fo.get("estimate", {}).get("total_s"), "optimisé avec ton choix : %s échanges (sans : %s), durée recalculée par la U1" % (fo["swaps"], op["swaps"]))
+    heads = {}
+    for r in fo["mapping"]:
+        heads.setdefault(r["slot"]["slot"], set()).add((r["slot"]["ace"], r["slot"]["slot"]))
+    ok(all(r["slot"]["slot"] in (0, 1, 2, 3) for r in fo["mapping"]), "disposition sur les bobines chargées")
+else:
+    ok(fo.get("reason"), "pas possible -> raison donnée : %s" % fo.get("reason"))
+same = mb.forced_plans(core_, calls, cap, {str(t): row["slot"]["ace"] * 4 + row["slot"]["slot"]}, rep["live_slots"])["optimize"]
+ok(same["feasible"] and same["swaps"] == op["swaps"], "imposer la bobine que la U1 avait choisie : même optimisé (%s échanges)" % same["swaps"])
+ok(mb.forced_plans(core_, calls, cap, {str(t): 30}, rep["live_slots"]) == {}, "bobine inconnue -> rien")
+# envoi : imprime par le chemin des choix manuels de la U1, avec toute la disposition
+seen = []
+_prep = mb.u1_prepare
+mb.u1_prepare = lambda client, path, name, plan_name, prefs, expected, report=None, forced=None: seen.append((plan_name, forced)) or (_ for _ in ()).throw(mb.MultiAceError("stop test"))
+W.report = rep; W.job = dict(W.job, path=g); sent.clear()
+W._reply = lambda ok__, text, final=False, step=None: sent.append({"done": ok__, "text": text})
+W._print("optimize", {}, dict(same and {str(t): row["slot"]["ace"] * 4 + row["slot"]["slot"]}), "upload")
+mb.u1_prepare = _prep
+exp = {str(r["t"]): r["slot"]["ace"] * 4 + r["slot"]["slot"] for r in same["mapping"]}
+ok(seen and seen[0][0] == "slicer" and seen[0][1] == exp, "envoi : plan « Comme tranché » de la U1 avec toute la disposition optimisée (remap)")
+# le fichier prepare a le meme remap que le plan optimise de la U1 (sans choix) : meme fichier
+import filecmp, shutil
+f_opt = mb.u1_prepare(c, g, "real.gcode", "optimize", {}, mb._signature(live), report=rep); shutil.copy(f_opt, "/tmp/opt_a.gcode")
+f_rm = mb.u1_prepare(c, g, "real.gcode", "slicer", {}, mb._signature(live), report=rep, forced={str(r["t"]): r["slot"]["ace"] * 4 + r["slot"]["slot"] for r in op["mapping"]})
+ok(filecmp.cmp("/tmp/opt_a.gcode", f_rm, shallow=False), "même fichier imprimé que le plan « Optimisé » de la U1 (chemin des choix manuels)")
+# fenetre : Optimise reste cliquable avec un choix
+D5 = {"name": "x.gcode", "report": rep, "labels": mb.PLAN_LABELS, "prefs": {}, "info": mb.slice_info(g), "load": {"slots": {}, "real": real, "dia": "0.4"}, "can_force": True}
+open("/home/claude/testdata/v0390.html", "w").write(mb.U1_PAGE.replace("<head>", "<head>" + fake, 1).replace("__DATA__", json.dumps(D5)))
+with sync_playwright() as p:
+    b = p.chromium.launch(executable_path="/usr/bin/google-chrome"); pg = b.new_page(viewport={"width": 1100, "height": 1300}); pg.goto("file:///home/claude/testdata/v0390.html"); pg.wait_for_timeout(300)
+    pg.click("input[value=optimize]"); pg.wait_for_timeout(100)
+    pg.locator("[data-pk]").first.click(); pg.wait_for_timeout(100)
+    pg.locator("[data-ch]:not([data-v=''])").nth(2).click(); pg.wait_for_timeout(100)
+    m = pg.evaluate("window.__p")[-1]
+    ok("calcul avec tes choix" in pg.inner_text(".plans"), "pendant le calcul : « calcul avec tes choix… »")
+    res = mb.forced_estimate(core_, rep, cap, m["forced"], rep["live_slots"]) or {}
+    res["plans"] = mb.forced_plans(core_, calls, cap, m["forced"], rep["live_slots"])
+    pg.evaluate("m=>window.__h.forEach(f=>f(m))", {"type": "fest", "key": m["key"], "res": res}); pg.wait_for_timeout(150)
+    feas = res["plans"]["optimize"].get("feasible")
+    ok(pg.is_disabled("input[value=optimize]") != bool(feas), "« Optimisé » cliquable si possible avec ton choix (%s)" % feas)
+    if feas:
+        ok(pg.is_checked("input[value=optimize]") and "avec tes choix" in pg.inner_text(".plans"), "reste sur « Optimisé · avec tes choix »")
+        pg.click("#up"); mm = pg.evaluate("window.__p")[-1]
+        ok(mm["plan"] == "optimize" and mm["forced"] == m["forced"], "envoi : plan optimize + ton choix")
+    pg.screenshot(path="/home/claude/multiace_bridge/test/v390.png", full_page=True)
+    b.close()
+print("v0390 OK")

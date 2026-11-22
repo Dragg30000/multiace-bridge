@@ -4,6 +4,14 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (2 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.39.0 (22/11/2026)
+- **« Optimisé » et « Par couche » avec tes bobines imposées.** Imposer une bobine ne grise plus les autres plans : l'optimiseur de ta U1 les recalcule autour de ton choix. Ton choix lui est donné comme une contrainte de son propre format (le filament imposé ne peut aller que sur la tête de sa bobine, avec la couleur et la matière de cette bobine) ; la U1 décide de tout le reste. Chaque plan affiche ses échanges et sa durée « avec tes choix », ou « impossible avec tes choix ». À l'envoi, la disposition complète passe par le chemin des choix manuels de multiACE (comme « Comme tranché » avec bobines imposées) : test à l'appui, le fichier préparé est identique octet pour octet à celui du plan « Optimisé » de la U1 pour la même disposition. Avec multiACE 1.27b : comme avant (Comme tranché seulement).
+- Tests : v037_test.py (82 vérifications), 19 tests OK.
+
+## 0.38.3 (22/11/2026)
+- **Bobines imposées : les chiffres suivent tes choix.** Quand tu imposes une bobine, le nombre d'échanges et la durée estimée sont recalculés par le code de ta U1 (le même calcul que son Preflight web quand on modifie la correspondance) : « 140 échanges · avec tes choix ». Avant, ils restaient ceux du plan d'origine (« avant tes choix »). Pendant le calcul : « calcul avec tes choix… ». Le plan « Comme tranché » affiche aussi ces chiffres.
+- Tests : v037_test.py (69 vérifications), 19 tests OK.
+
 ## 0.38.2 (21/11/2026)
 - Interface anglaise : textes restés en français traduits (« attente » / « échec » dans la file, « Aucune » dans le choix de bobine, étape « pose une bobine » de la Disposition finale). Rien d'autre ne change.
 - Vidéo démo (anglais, 40 s, carrée) : `presentation\multiACE_Bridge_demo.mp4`.
