@@ -20,12 +20,24 @@ New interface in 0.42: one lanes map for 1 to 4 ACEs, a print window that shows 
 
 **New in 0.43:** head mode (one ACE per head) and multi mode with colour copies, a hand-fed head or background swaps, right in the print window; several spools of the same colour. / **Nouveau en 0.43 :** le mode tête (un ACE par tête) et le mode multi avec copies de couleur, tête à la main ou arrière-plan, dans la fenêtre ; plusieurs bobines pareilles.
 
+**New in 0.44:** drying for up to 7 days, in 10 h cycles that the plugin restarts while OrcaSlicer is open. / **Nouveau en 0.44 :** séchage jusqu'à 7 jours, par cycles de 10 h que le plugin relance tant qu'OrcaSlicer est ouvert.
+
 <table>
 <tr>
 <td width="38%" valign="top"><img src="presentation/readme/panel_map.png" width="300"><br><b>Live panel: lanes map</b><br>The 4 heads on top, one row per ACE. Solid line: spool loaded in the head. Dotted line: load queued. Orange diamond: path not calibrated in multiACE. Humidity, temperature and drying per ACE.</td>
 <td width="62%" valign="top"><img src="presentation/readme/panel_spool.png" width="300"><br><b>Click a spool or a head</b><br>Load, swap, unload, calibrate the flow (PA), edit colour and material (works without RFID, linked to the multiACE spool table). Actions run one after another in a queue, with auto homing.</td>
 </tr>
 </table>
+
+### Drying for up to 7 days
+
+<p align="center"><img src="presentation/readme/long_drying.png" width="380"></p>
+
+Pick from 1 h to 7 days in the ACE row (**Dry**). One drying command lasts 10 h at most (the maximum in multiACE's web interface), so for longer the ACE dries in 10 h cycles: when a cycle ends, the plugin starts the next one with the same command, also during a print, **as long as OrcaSlicer is open**. If Orca is closed, the ACE finishes its cycle and stops; when Orca opens again, drying resumes if time is left.
+
+- The ACE row shows the **total time left** and a bar over the whole drying. **Stop** stops everything, including the next cycles.
+- A drying stopped from the U1 or multiACE's web interface is **not restarted on its own**: the panel asks (**Restart**).
+- An ACE that drops its USB link and comes back gets its next cycle by itself. This works even with the ACE guard option off.
 
 ### Export with your U1's own Preflight
 
@@ -62,7 +74,7 @@ On export, the plugin runs **the Preflight code served by your U1** (your multiA
 - **Filaments 5 and up** (multiACE 1.90 virtual tools): the “Before slicing” card shows multiACE's *Slicer filament → MMU / Slot* table and whether each slot holds the right colour.
 - Also in the panel: **before slicing** (nozzles fitted on the U1 and what to set in Orca), **ACE guard** (restarts drying and feed after an ACE USB dropout), **U1 camera and screen**, **compact mode**, **⚙ Options**, **U1 address box**, and the **pipeline step added to your U1 process preset** automatically (save the preset to keep it).
 
-Full presentation (before the 0.42 interface): [EN slides](presentation/multiACE_Bridge_slides_EN.pdf), [diaporama FR](presentation/multiACE_Bridge_diaporama_FR.pdf), guides in [docs/](docs/). French screenshots: [presentation/images](presentation/images) (20 to 27 for 0.42, 28 to 31 for 0.43).
+Full presentation (before the 0.42 interface): [EN slides](presentation/multiACE_Bridge_slides_EN.pdf), [diaporama FR](presentation/multiACE_Bridge_diaporama_FR.pdf), guides in [docs/](docs/). French screenshots: [presentation/images](presentation/images) (20 to 27 for 0.42, 28 to 31 for 0.43, 32 for 0.44).
 Interface in French or English (⚙ Options → Language).
 
 ## Install / Installation
