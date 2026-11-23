@@ -18,6 +18,8 @@
 
 New interface in 0.42: one lanes map for 1 to 4 ACEs, a print window that shows the U1's plans side by side, and warnings when a colour will not print as in your project. / Nouvelle interface en 0.42 : une carte des voies pour 1 à 4 ACE, une fenêtre qui montre les plans de la U1 côte à côte, et un avertissement quand une couleur ne sortira pas comme dans le projet.
 
+**New in 0.43:** head mode (one ACE per head) and multi mode with colour copies, a hand-fed head or background swaps, right in the print window; several spools of the same colour. / **Nouveau en 0.43 :** le mode tête (un ACE par tête) et le mode multi avec copies de couleur, tête à la main ou arrière-plan, dans la fenêtre ; plusieurs bobines pareilles.
+
 <table>
 <tr>
 <td width="38%" valign="top"><img src="presentation/readme/panel_map.png" width="300"><br><b>Live panel: lanes map</b><br>The 4 heads on top, one row per ACE. Solid line: spool loaded in the head. Dotted line: load queued. Orange diamond: path not calibrated in multiACE. Humidity, temperature and drying per ACE.</td>
@@ -45,14 +47,22 @@ On export, the plugin runs **the Preflight code served by your U1** (your multiA
 
 <p align="center"><img src="presentation/readme/empty_head.png" width="420"></p>
 
+- **Head mode** (one ACE per head with a 4-to-1 combiner, side feeders) and multi mode with **colour copies**, a **hand-fed head** or **background swaps** (ace2k): the U1 answers with its head-mode report, and the window shows it. One column per head with its ACE lanes or its side feeder; the U1's plans *As loaded*, *Optimized*, *Per layer* and *Less mixing*, with how many swaps run **in the background** while another head prints; the moves to place the spools for a proposed plan (printing waits until they are in place); your own spool choices, recomputed by the U1 code. The file is rewritten by the U1 code in its head mode, byte-identical to multiACE's web Preflight for the same choice. *New, not tried yet on a real U1 wired in head mode: if something looks wrong, use “Open in multiACE Preflight” (⋯ menu).*
+
+<p align="center"><img src="presentation/readme/head_mode.png" width="760"></p>
+
 - **High flow / Standard nozzle warning**: with multiACE the slot decides the head, so a colour can land on another nozzle type; the window tells you.
 - **Force a spool** per filament, passed as is to the U1 code (same as a manual edit in multiACE's web Preflight).
+- **Several spools of the same colour**: in the spool editor, pick a spool that already sits in another lane, and a matching new spool entry is created for this lane (brand, material, colour, name and stored PA). The first one doesn't move.
+
+<p align="center"><img src="presentation/readme/spool_copy.png" width="320"></p>
+
 - **Print start**: bed mesh limited to the printed area, flow (PA) calibration per head, stored PA per spool with “Calibrate before”, soft travel to the purge line, time-lapse.
 - **U1 time estimate** (multiACE 1.90), **put in the multiACE queue** (multiACE 1.90 Print Hub), **send to the U1 without printing**.
 - **Filaments 5 and up** (multiACE 1.90 virtual tools): the “Before slicing” card shows multiACE's *Slicer filament → MMU / Slot* table and whether each slot holds the right colour.
 - Also in the panel: **before slicing** (nozzles fitted on the U1 and what to set in Orca), **ACE guard** (restarts drying and feed after an ACE USB dropout), **U1 camera and screen**, **compact mode**, **⚙ Options**, **U1 address box**, and the **pipeline step added to your U1 process preset** automatically (save the preset to keep it).
 
-Full presentation (before the 0.42 interface): [EN slides](presentation/multiACE_Bridge_slides_EN.pdf), [diaporama FR](presentation/multiACE_Bridge_diaporama_FR.pdf), guides in [docs/](docs/). French screenshots of 0.42: [presentation/images](presentation/images) (20 to 27).
+Full presentation (before the 0.42 interface): [EN slides](presentation/multiACE_Bridge_slides_EN.pdf), [diaporama FR](presentation/multiACE_Bridge_diaporama_FR.pdf), guides in [docs/](docs/). French screenshots: [presentation/images](presentation/images) (20 to 27 for 0.42, 28 to 31 for 0.43).
 Interface in French or English (⚙ Options → Language).
 
 ## Install / Installation

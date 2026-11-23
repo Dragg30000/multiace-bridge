@@ -4,6 +4,20 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (1 à 4 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.43.1 (23/11/2026)
+- **Mode tête dans la fenêtre « Preflight de la U1 ».** En mode tête (un ACE par tête, combineur 4→1), et en mode multi avec les copies de couleur, une tête alimentée à la main ou les changements en arrière-plan (ace2k), le Preflight de la U1 répond par un rapport « par tête ». La fenêtre le montre maintenant :
+  - **Carte** : en mode tête, une colonne par tête, avec les 4 voies de son ACE ou son chargeur latéral. ACE non connecté signalé. En mode multi, la carte des voies habituelle, copies marquées « copie ».
+  - **Plans de la U1** : « Comme chargé », « Optimisé », « Par couche », « Moins de mélange ». Durée, échanges, purge, rubans, et les **changements en arrière-plan** (« 14 sur 14, ~21 min gagnées », et pourquoi les autres ne le sont pas).
+  - **Plans proposés** : la U1 les calcule sans regarder les bobines en place. La fenêtre donne les gestes (déplacer, poser, charger un chargeur latéral) avec « Placer pas à pas ». Le lancement attend que les bobines soient en place, vérifié avec le rapprochement de couleurs de la U1.
+  - **Choisir les bobines moi-même** (plan « Comme chargé ») : une voie ou un chargeur de la matière du filament. Durée, échanges, arrière-plan et copies recalculés par le code de la U1.
+  - **Envoi** : le fichier est réécrit par le code de la U1 en mode « head », identique octet pour octet à celui du Preflight web de multiACE pour le même choix. File multiACE en mode « head ».
+  - Nouveau, **pas encore essayé sur une vraie U1 câblée en mode tête** : en cas de doute, « Ouvrir dans le Preflight multiACE » (menu ⋯).
+- **Plusieurs bobines pareilles** (plusieurs rouges) : dans « Modifier », une bobine de la table multiACE déjà posée dans une autre voie occupée est proposée avec « Une bobine pareille sera créée pour cette voie ». Choisie, elle donne une **nouvelle bobine de la table**, pareille (marque, matière, type, couleur, nom, densité), avec son **PA mémorisé**. L'originale ne bouge pas. Avant : refusé.
+- Interface anglaise : trois phrases du placement pas à pas restaient en français.
+- Nouvelle bannière avec la nouvelle interface.
+- Tests : 22 suites OK. Nouvelles : head_test (mode tête, copies, tête à la main ; fichier identique au Preflight web), copie_test.
+- Versions 0.42.1 et 0.43.0 : internes, regroupées dans la 0.43.1.
+
 ## 0.42.0 (22/11/2026)
 - **Nouvelle interface** du panneau et de la fenêtre « Preflight de la U1 ». Polices intégrées : rien n'est téléchargé.
   - **Carte des voies**, la même avec 1 à 4 ACE en mode multi : les 4 têtes en haut, une ligne par ACE. Trait plein : bobine chargée dans la tête. Pointillé de couleur : chargement prévu par la file. Losange orange : chemin pas encore calibré dans multiACE.

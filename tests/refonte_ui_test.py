@@ -10,9 +10,10 @@ def ok(c, m):
     if not c: sys.exit(1)
 from playwright.sync_api import sync_playwright
 FAKE = """<script>window.__h=[];window.__p=[];window.orca={postMessage:function(m){window.__p.push(typeof m==="string"?JSON.parse(m):m)},onMessage:function(f){window.__h.push(f)}};</script>"""
-ok('version = "0.42.0"' in open("/home/claude/prive/multiace_bridge_any.py").read() and mb.VERSION == "0.42.0", "version 0.42.0")
+ok('version = "0.43.1"' in open("/home/claude/prive/multiace_bridge_any.py").read() and mb.VERSION == "0.43.1", "version 0.43.1")
 _head = open("/home/claude/prive/multiace_bridge_any.py").read(1000)
-ok(("(privé)" in _head) != ("(Snapmaker U1)" in _head), "nom : copie privée ou version publique")
+_nm = [l for l in _head.splitlines() if l.startswith("# name = ")][0]
+ok(("(privé)" in _nm) != ("(Snapmaker U1)" in _nm), "nom : copie privée ou version publique")
 ok("MB Display" in mb.PANEL and "MB Text" in mb.U1_PAGE and "MB Hubot" not in mb.PANEL + mb.U1_PAGE and "/*__FONTS__*/" not in mb.PANEL + mb.U1_PAGE, "polices intégrées dans les deux pages")
 ok(mb.action_label("ACE_LOAD_HEAD", {"HEAD": 1, "ACE": 1, "SLOT": 1}) == "Chargement de T2 : ACE 2, voie 2", "file : vocabulaire des voies")
 ok(mb.event_fractions(None) == (None, None) and mb.event_fractions({"events": [1, 2, 3]}) == (3, None), "rubans : sans minutes M73, rang des échanges")
@@ -32,7 +33,8 @@ def state(**kw):
                        {"idx": 1, "filament_detected": False, "ace": None, "slot": None},
                        {"idx": 2, "filament_detected": True, "ace": 1, "slot": 2, "color": "#E5483F", "material": "PLA"},
                        {"idx": 3, "filament_detected": True, "ace": 1, "slot": 3, "color": "#1B1D21", "material": "PLA"}],
-         "spools": {"3": {"id": 3, "weight_g": 720, "color": "F4F4F4", "material": "PLA"}, "4": {"id": 4, "weight_g": 880, "color": "2F80D1", "material": "PETG"}},
+         "spools": {"3": {"id": 3, "weight_g": 720, "color": "F4F4F4", "material": "PLA"}, "4": {"id": 4, "weight_g": 880, "color": "2F80D1", "material": "PETG"},
+                    "5": {"id": 5, "weight_g": 640, "color": "FFC83A", "material": "PLA"}},
          "spool_binding": {"0_0": 3, "0_3": 4}}
     s.update(kw); return s
 real = ["Haut débit", "Haut débit", "Standard", "Haut débit"]
@@ -98,10 +100,16 @@ with sync_playwright() as p:
     pg.click('[data-pk="s:0:3"]'); pg.click('[data-ed="0_3"]')
     ok(pg.locator(".ed").count() == 1, "éditeur ouvert dans la fiche")
     pg.click('[data-ed="0_3"]'); ok(pg.locator(".ed").count() == 0, "2e clic sur Modifier : refermé")
-    pg.click('[data-ed="0_3"]'); pg.click("#e_spbtn"); pg.locator('#e_splist .spo[data-v="3"]').click()
-    ok(pg.input_value("#e_w") == "720", "bobine choisie : son poids est repris")
+    pg.click('[data-ed="0_3"]'); pg.click("#e_spbtn"); pg.locator('#e_splist .spo[data-v="5"]').click()
+    ok(pg.input_value("#e_w") == "640", "bobine choisie : son poids est repris")
+    # 0.43.1 : la bobine #3 est dans ACE 1 voie 1 (occupée) : choisie ici, elle donne une bobine pareille
+    pg.click("#e_spbtn"); row = pg.locator('#e_splist .spo[data-v="copy:3"]')
+    ok(row.count() == 1 and "Une bobine pareille sera créée pour cette voie." in row.inner_text(), "bobine dans une autre voie occupée : copie proposée")
+    row.click()
+    ok(pg.input_value("#e_spid") == "copy:3" and "Copie de" in pg.inner_text("#e_spbtn") and pg.input_value("#e_w") == "1000"
+       and pg.is_visible("#e_cpn") and "#3" in pg.inner_text("#e_cpn"), "copie : bouton, poids d'une bobine neuve, explication")
     pg.click("#e_ok"); e = [m for m in P(pg) if m["command"] == "edit"]
-    ok(e and e[-1]["ace"] == 0 and e[-1]["slot"] == 3 and e[-1]["spool"] == "3", "édition envoyée : %s" % e[-1:])
+    ok(e and e[-1]["ace"] == 0 and e[-1]["slot"] == 3 and e[-1]["spool"] == "copy:3", "édition envoyée : %s" % e[-1:])
     send({"command": "state", "state": st, "prep": prep})
     # repli de la carte « Avant de trancher » et mode réduit
     pg.click("#prep .ah h2"); f2 = [m for m in P(pg) if m["command"] == "prefs_set"]
