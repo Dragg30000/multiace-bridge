@@ -4,6 +4,16 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (1 à 4 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.44.0 (23/11/2026)
+- **Séchage jusqu'à 7 jours** (avant : 8 h au plus). Durées : 1, 2, 4, 6, 8 et 12 h, puis 1, 2, 3, 5 et 7 jours.
+  - Une commande de séchage dure 10 h au plus (le maximum de l'interface web de multiACE). Au-delà, l'ACE sèche par cycles de 10 h : le plugin lance le cycle suivant à la fin du précédent, avec la même commande ACE_DRY qu'avant, aussi pendant une impression.
+  - Le bandeau de l'ACE affiche le temps restant au total (« 50 °C, 2 j 14 h ») et une barre sur toute la durée. Au survol : la durée choisie. Entre deux cycles : « démarrage… ». File d'attente : « Séchage ACE 1 (50 °C, 3 j par cycles de 10 h) ».
+  - « Arrêter » arrête tout : le cycle en cours, les cycles suivants, et un séchage de cet ACE encore dans la file.
+  - Séchage arrêté ailleurs avant la fin d'un cycle (écran de la U1, interface web multiACE) : pas relancé tout seul. Le panneau le dit avec « Relancer le séchage » ; le bandeau affiche « En pause », « Relancer » et « Arrêter ».
+  - ACE déconnecté puis revenu : le cycle suivant repart tout seul. Durée atteinte : « séchage terminé », aussi en notification d'Orca.
+  - Ce sont les relances d'OrcaSlicer : il doit rester ouvert. Fermé, l'ACE finit son cycle puis s'arrête. Le plan est enregistré (`dry_plan.json`, à côté des réglages) : à la réouverture d'Orca, le séchage reprend s'il n'est pas fini. Marche aussi case « Garde-fou » décochée.
+- Tests : 23 suites OK. Nouvelle : dry_test (cycles, fausse U1 avec la vraie file et le vrai fil du garde-fou, panneau en français et en anglais).
+
 ## 0.43.1 (23/11/2026)
 - **Mode tête dans la fenêtre « Preflight de la U1 ».** En mode tête (un ACE par tête, combineur 4→1), et en mode multi avec les copies de couleur, une tête alimentée à la main ou les changements en arrière-plan (ace2k), le Preflight de la U1 répond par un rapport « par tête ». La fenêtre le montre maintenant :
   - **Carte** : en mode tête, une colonne par tête, avec les 4 voies de son ACE ou son chargeur latéral. ACE non connecté signalé. En mode multi, la carte des voies habituelle, copies marquées « copie ».
