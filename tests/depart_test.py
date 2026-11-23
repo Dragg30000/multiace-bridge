@@ -74,7 +74,7 @@ try:
         if posted: break
 finally:
     mb.MultiAce, P._post = MA, post0
-ok(posted and not posted[-1]["ok"] and "notée dans ACE 1, voie 1" in posted[-1]["text"] and FakeClient.last.calls == [],
+ok(posted and not posted[-1]["ok"] and "est dans ACE 1, voie 1" in posted[-1]["text"] and FakeClient.last.calls == [],
    "refusé en français avant d'écrire quoi que ce soit (%s)" % (posted[-1]["text"][:60] if posted else ""))
 
 # --- 3. « Optimisé » impossible à cause des bobines chargées (T4 sans PLA identifié) : disposition de la U1
