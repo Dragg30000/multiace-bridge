@@ -4,6 +4,11 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (1 à 4 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.46.3 (27/11/2026)
+- **Correctif : envoi annulé à tort, « le fichier préparé n'a pas la marque multiACE ».** Avant d'envoyer, le plugin vérifie que le fichier préparé porte la marque de multiACE. Il ne la cherchait que dans les 64 premiers Ko du fichier. Or multiACE l'écrit juste avant la 1re couche, après les vignettes d'aperçu et le G-code de démarrage. Avec un aperçu lourd (modèle détaillé, beaucoup de couleurs), elle tombait plus loin, et la fenêtre annulait l'envoi d'un fichier pourtant bon. Le plugin la cherche maintenant dans le 1er Mo (multiACE lui-même lit 512 Ko). Rien d'autre ne change.
+  - Avec la 0.46.2, pour contourner : menu ⋯ → « Ouvrir dans le Preflight multiACE ».
+- Tests : 27 suites OK avec le code de multiACE 1.91. Nouvelle : marque_test (vrai export de la U1 avec un aperçu plus lourd, préparé par le vrai code multiACE : marque à 93 Ko, puis à 411 Ko).
+
 ## 0.46.2 (27/11/2026)
 - **multiACE+ 1.91 : options « Au départ » envoyées avant l'impression.** Depuis multiACE 1.90.2, le Preflight de la U1 ne met plus la calibration du plateau, la calibration du flux (PA) et le time-lapse en ligne dans le fichier : une impression en cours ne peut plus les changer (avec le firmware 2.0 de la U1, elle était annulée, erreur 531). Il met une marque en tête du fichier. Pour « Imprimer », le plugin envoie maintenant ces options à la U1 juste avant de lancer l'impression, comme le Preflight web de multiACE. Sans cela, elles n'étaient plus appliquées avec multiACE 1.90.2 et 1.91.
   - Si la U1 les refuse, l'impression n'est pas lancée et la fenêtre dit pourquoi.
