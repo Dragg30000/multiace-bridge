@@ -204,6 +204,34 @@ lp = [p for p in fw2.posts if p.get("type") == "light"][-1]
 check(lp.get("error", "").startswith("Lumière non changée : ") and "value" not in lp, "lumière refusée : %s" % lp)
 LIGHT["fail"] = False
 
+# 0.47.1 : « Panneau multiACE » : vue compacte de multiACE dans sa propre fenêtre, chargée en entier
+class PW:
+    def __init__(s, **k): s.k = k; s.open = True; s.closed = False
+    def is_open(s): return s.open
+    def close(s):
+        s.open = False; s.closed = True
+        if s.k.get("on_close"): s.k["on_close"]()
+WINS = []
+def fake_create(**k):
+    w = PW(**k); WINS.append(w); return w
+mb.orca.host.ui = types.SimpleNamespace(create_window=fake_create)
+W.on_message({"a": "panel"})
+url = ORIGIN + "/multiace/?panel=1&theme=dark"
+check(len(WINS) == 1 and WINS[0].k["title"] == "multiACE" and ('window.location.replace("%s")' % url) in WINS[0].k["html"]
+      and WINS[0].k["width"] < WINS[0].k["height"], "panneau multiACE : petite fenêtre, chargée en entier sur %s" % url)
+W.on_message({"a": "panel"})
+check(len(WINS) == 2 and WINS[0].closed and not WINS[1].closed and mb._PANEL_WIN["w"] is WINS[1],
+      "panneau déjà ouvert : rouvert au premier plan")
+WINS[1].close()
+check(mb._PANEL_WIN["w"] is None, "panneau fermé : oublié")
+fw2.posts.clear(); sent_r = []
+_r0 = W._reply; W._reply = lambda ok_, text, final=False: sent_r.append((ok_, text))
+def boom2(**k): raise RuntimeError("pas de fenêtre")
+mb.orca.host.ui = types.SimpleNamespace(create_window=boom2)
+W.on_message({"a": "panel"})
+check(sent_r == [(False, "Panneau multiACE : pas de fenêtre")], "fenêtre impossible : la fenêtre d'impression le dit")
+W._reply = _r0
+
 # ---------------------------------------------------------------- 3. fenêtre dans Chrome
 FAKE = """<script>window.__h=[];window.__p=[];window.orca={postMessage:function(m){window.__p.push(typeof m==="string"?JSON.parse(m):m)},onMessage:function(f){window.__h.push(f)}};</script>"""
 os.makedirs("/home/claude/testdata", exist_ok=True)
@@ -340,7 +368,7 @@ with sync_playwright() as pw:
         check(pg.inner_text("#lk").strip() == ("Regarder la U1" if fr else "Look at the U1"), lang + " : bouton « Regarder la U1 »")
         pg.click("#lk"); pg.wait_for_selector("#lvov", timeout=3000)
         tabs = pg.eval_on_selector_all("#lvt button", "a=>a.map(x=>[x.textContent,x.className])")
-        check([t[0] for t in tabs] == (["Écran", "Caméra", "Panneau multiACE"] if fr else ["Screen", "Camera", "multiACE panel"])
+        check([t[0] for t in tabs] == (["Écran", "Caméra"] if fr else ["Screen", "Camera"])
               and tabs[0][1] == "on", lang + " : onglets %s" % [t[0] for t in tabs])
         pg.wait_for_function("(()=>{var i=document.querySelector('#lvi');return i&&i.naturalWidth===480})()", timeout=5000)
         src = pg.get_attribute("#lvi", "src")
@@ -370,9 +398,14 @@ with sync_playwright() as pw:
         check(pg.is_checked("#lvli") and not pg.is_disabled("#lvli"), lang + " : lumière allumée")
         pg.evaluate("()=>window.__h.forEach(f=>f({type:'light',error:'Lumière non changée : moonraker'}))"); pg.wait_for_timeout(80)
         check(pg.inner_text("#lvm") == ("Lumière non changée : moonraker" if fr else "Light not changed: moonraker"), lang + " : lumière refusée affichée")
-        pg.click("#lvt button:nth-child(3)"); pg.wait_for_selector("#lvc iframe", timeout=3000)
-        check(pg.get_attribute("#lvc iframe", "src") == ORIGIN + "/multiace/?panel=1&theme=dark" and not pg.is_visible("#lvl"),
-              lang + " : panneau multiACE")
+        # 0.47.1 : panneau multiACE dans sa propre fenêtre (dans un cadre, l'interface de multiACE ne démarre pas)
+        lvp = pg.inner_text("#lvp").strip()
+        pg.evaluate("window.__p.length=0"); pg.click("#lvp"); pg.wait_for_timeout(80)
+        check(lvp == ("Panneau multiACE" if fr else "multiACE panel") and pg.evaluate("window.__p") == [{"a": "panel"}]
+              and pg.query_selector("#lvc iframe") is None and pg.query_selector("#lvov") is not None
+              and pg.get_attribute("#lvp", "title") == ("Ouvre la vue compacte de multiACE dans sa propre fenêtre" if fr else
+                                                         "Opens multiACE's compact view in its own window"),
+              lang + " : « %s » : fenêtre demandée au plugin, pas de cadre, la vue reste ouverte" % lvp)
         pg.evaluate("d=>window.__h.forEach(f=>f({type:'data',data:d}))", dict(copy.deepcopy(dd), auto=True)); pg.wait_for_timeout(120)
         check(pg.query_selector("#lvov") is not None, lang + " : relecture des bobines : la vue reste ouverte")
         pg.keyboard.press("Escape"); pg.wait_for_timeout(80)
@@ -389,8 +422,8 @@ with sync_playwright() as pw:
         check(plain(pg.inner_text("#lvm")).startswith("Écran distant indisponible." if fr else "Remote screen unavailable."),
               lang + " : écran indisponible : %r" % pg.inner_text("#lvm")[:60])
         tabs = pg.eval_on_selector_all("#lvt button", "a=>a.map(x=>x.textContent)")
-        check(tabs == (["Écran", "Caméra Chambre", "Caméra Plateau", "Panneau multiACE"] if fr else
-                       ["Screen", "Camera Chambre", "Camera Plateau", "multiACE panel"]), lang + " : une caméra par onglet %s" % tabs)
+        check(tabs == (["Écran", "Caméra Chambre", "Caméra Plateau"] if fr else
+                       ["Screen", "Camera Chambre", "Camera Plateau"]), lang + " : une caméra par onglet %s" % tabs)
         CAMREQ.clear()
         pg.click("#lvt button:nth-child(3)"); pg.wait_for_function("(()=>{var i=document.querySelector('#lvi');return i&&i.naturalWidth===320})()", timeout=5000)
         check(pg.get_attribute("#lvi", "src").startswith(ORIGIN + "/multiace/api/webcam/snapshot?cam=Plateau&t=")
