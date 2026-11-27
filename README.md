@@ -26,6 +26,8 @@ New interface in 0.42: one lanes map for 1 to 4 ACEs, a print window that shows 
 
 **New in 0.46:** auto-dry by humidity with an ACE 2 Pro (an ACE Pro can follow it), and unloading the heads at the end of the print. / **Nouveau en 0.46 :** séchage auto selon l'humidité avec un ACE 2 Pro (un ACE Pro peut le suivre), et déchargement des têtes à la fin de l'impression.
 
+**New in 0.48:** with multiACE 1.94, the print window offers multiACE's choice between plans on the loaded spools and plans over all lanes. / **Nouveau en 0.48 :** avec multiACE 1.94, la fenêtre d'impression propose le choix de multiACE entre plans sur les bobines chargées et plans sur toutes les voies.
+
 **New in 0.47:** the print window follows the U1 (spools read again when they change), shows the grams with the purge, per colour and per spool, lets you look at the U1 (touchscreen, cameras, light, multiACE panel) and warns when two filaments share a colour. / **Nouveau en 0.47 :** la fenêtre d'impression suit la U1 (bobines relues quand elles changent), affiche les grammes purge comprise, par couleur et par bobine, permet de regarder la U1 (écran tactile, caméras, lumière, panneau multiACE) et prévient quand deux filaments ont la même couleur.
 
 <table>
@@ -40,6 +42,7 @@ New interface in 0.42: one lanes map for 1 to 4 ACEs, a print window that shows 
 <p align="center"><img src="presentation/readme/print_preview.png" width="760"></p>
 
 - **Preview in your spool colours**: the G-code thumbnail (now larger) is repainted with the colours of the spools of the plan shown, a bit more vivid than Orca's thumbnail, and follows the plan you pick and the spools you force. Click it to see the project colours again. It's an approximation: each pixel goes to the project colour that explains it best, shading included, then takes its spool's colour; black, grey and white are measured on the image (Orca's black isn't a shadow). The file doesn't change.
+- **Loaded spools / All lanes** (multiACE 1.94+): like multiACE's web Preflight, the Optimized, Per layer and Less mixing plans either keep the spools where they are (the default; the closest colour when needed) or propose where to put them. Printing uses the same choice.
 - **Same colour twice**: when two filaments of the project share a colour, a **!** on the preview says so: the repainted preview can't tell them apart. The file isn't touched.
 - **Filament left, purge included**: for the plan shown, the grams of each spool are compared with the weight left in the multiACE spool table: "Not enough filament", or "Filament is tight" under 10 % margin. Nothing when the weight is unknown. With the U1's estimate (multiACE 1.90+), the grams include the purge: each colour shows what it needs (hover: print + purge), and on the map each spool used shows what it needs and what it has left ("23 g / 500 g"), in red when it isn't enough.
 
