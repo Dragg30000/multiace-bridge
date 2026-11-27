@@ -22,12 +22,31 @@ New interface in 0.42: one lanes map for 1 to 4 ACEs, a print window that shows 
 
 **New in 0.44:** drying for up to 7 days, in 10 h cycles that the plugin restarts while OrcaSlicer is open. / **Nouveau en 0.44 :** séchage jusqu'à 7 jours, par cycles de 10 h que le plugin relance tant qu'OrcaSlicer est ouvert.
 
+**New in 0.45:** the print window repaints the thumbnail in your spool colours, warns when a spool runs short, and has the printer settings (camera detections and their sensitivity, auto-refill, Quad Replenish). / **Nouveau en 0.45 :** la fenêtre d'impression repeint la vignette aux couleurs de tes bobines, prévient quand une bobine va manquer et règle l'imprimante (détections de la caméra et leur sensibilité, auto-refill, Quad Replenish).
+
+**New in 0.46:** auto-dry by humidity with an ACE 2 Pro (an ACE Pro can follow it), and unloading the heads at the end of the print. / **Nouveau en 0.46 :** séchage auto selon l'humidité avec un ACE 2 Pro (un ACE Pro peut le suivre), et déchargement des têtes à la fin de l'impression.
+
 <table>
 <tr>
 <td width="38%" valign="top"><img src="presentation/readme/panel_map.png" width="300"><br><b>Live panel: lanes map</b><br>The 4 heads on top, one row per ACE. Solid line: spool loaded in the head. Dotted line: load queued. Orange diamond: path not calibrated in multiACE. Humidity, temperature and drying per ACE.</td>
 <td width="62%" valign="top"><img src="presentation/readme/panel_spool.png" width="300"><br><b>Click a spool or a head</b><br>Load, swap, unload, calibrate the flow (PA), edit colour and material (works without RFID, linked to the multiACE spool table). Actions run one after another in a queue, with auto homing.</td>
 </tr>
 </table>
+
+### Print window: your spool colours, filament left, printer settings, unload at the end
+
+<p align="center"><img src="presentation/readme/print_preview.png" width="760"></p>
+
+- **Preview in your spool colours**: the G-code thumbnail (now larger) is repainted with the colours of the spools of the plan shown, a bit more vivid than Orca's thumbnail, and follows the plan you pick and the spools you force. Click it to see the project colours again. It's an approximation: each pixel goes to the project colour that explains it best, shading included, then takes its spool's colour; black, grey and white are measured on the image (Orca's black isn't a shadow). The file doesn't change.
+- **Filament left**: for the plan shown, the grams of each spool are compared with the weight left in the multiACE spool table: "Not enough filament", or "Filament is tight" under 10 % margin. Nothing when the weight is unknown.
+
+<p align="center"><img src="presentation/readme/printer_settings.png" width="420"></p>
+
+- **Printer settings**, under "At start", read from the U1 and saved on it in one click, like on its screen: Air-Print Detection and Quad Replenish (multiACE 1.90+), U1 auto-refill, light off when done, spaghetti and bed-object detection by the U1 camera with their sensitivity (low or high). A setting the U1 doesn't know isn't shown.
+
+<p align="center"><img src="presentation/readme/unload_at_end.png" width="560"></p>
+
+- **Unload at the end**: no head (default), all of them, or one head. Only the heads of the plan shown that are fed by an ACE are offered. Right after the file's `PRINT_END`, the plugin adds multiACE's unload (`ACE_UNLOAD_HEAD`, like the **Unload** button in the panel): XY homing if needed, heating, filament sent back to the ACE, heater off. A head that is already empty is skipped, and the send message says which heads will be unloaded. (The U1's own "unload at the end" setting does nothing for a print started by multiACE: the U1 only learns which heads a print uses from its own start screen.)
 
 ### Drying for up to 7 days
 
@@ -38,6 +57,17 @@ Pick from 1 h to 7 days in the ACE row (**Dry**). One drying command lasts 10 h 
 - The ACE row shows the **total time left** and a bar over the whole drying. **Stop** stops everything, including the next cycles.
 - A drying stopped from the U1 or multiACE's web interface is **not restarted on its own**: the panel asks (**Restart**).
 - An ACE that drops its USB link and comes back gets its next cycle by itself. This works even with the ACE guard option off.
+
+### Auto-dry with an ACE 2 Pro
+
+<p align="center"><img src="presentation/readme/auto_dry.png" width="400"></p>
+
+Shown only when an **ACE 2 Pro** is connected: it's the only ACE that measures its humidity. Otherwise nothing changes. **Auto** under **Dry** opens each ACE's settings:
+
+- **ACE 2 Pro**: starts drying above one humidity level, stops below another, at the temperature you pick. Crossed thresholds aren't offered.
+- **ACE Pro**: it has no humidity sensor, so it **follows** the ACE 2 Pro you pick, at its own temperature, and **runs on** for 0 min to 4 h after it (it's less airtight).
+
+multiACE does the drying (its `ACE_SET_AUTO_DRY`, already in 1.90), on the U1 itself, even with OrcaSlicer closed; by default not during a print. Each change is sent at once. A cycle started by auto-dry shows **Auto** in the ACE row. *Not tried yet with a real ACE 2 Pro: feedback welcome.*
 
 ### Export with your U1's own Preflight
 
@@ -83,7 +113,7 @@ Interface in French or English (⚙ Options → Language).
 
 **Manual:** download `multiace_bridge_any.py`, then Orca → File → Plugins → *Install local plugin* → restart Orca → allow network access to your U1.
 
-Requirements: OrcaSlicer 2.5, Snapmaker U1 with **multiACE 1.27b or newer** installed (tested on 1.27b and multiACE+ 1.90 with the paxx12 Extended firmware; the remote screen needs Extended with “Remote Screen” enabled). Tested with 2 ACE Pro on a USB hub.
+Requirements: OrcaSlicer 2.5, Snapmaker U1 with **multiACE 1.27b or newer** installed (tested on 1.27b and multiACE+ 1.90 with the paxx12 Extended firmware; the remote screen needs Extended with “Remote Screen” enabled). Tested with 2 ACE Pro on a USB hub; feedback welcome with an ACE 2 Pro (auto-dry).
 
 ## Bugs & feedback
 

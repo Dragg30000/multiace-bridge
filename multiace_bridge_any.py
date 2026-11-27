@@ -5,7 +5,7 @@
 # name = "multiACE Bridge (Snapmaker U1)"
 # description = "Interface pour multiACE de decay71 (Snapmaker U1) dans OrcaSlicer : panneau ACE, interface web multiACE en onglet, et envoi de l'export au Preflight de multiACE."
 # author = "Dragg avec son ami Claude"
-# version = "0.44.0"
+# version = "0.46.1"
 # ///
 """multiACE Bridge - relie OrcaSlicer 2.5 a multiACE (decay71/multiACE) sur une Snapmaker U1.
 
@@ -47,7 +47,7 @@ import uuid
 
 import orca
 
-VERSION = "0.44.0"
+VERSION = "0.46.1"
 # Polices de l'interface : versions modifiées de Hubot Sans et Mona Sans (GitHub, SIL Open Font License
 # 1.1, voir OFL.txt), réduites au latin et renommées « MB Display » et « MB Text » (les noms « Hubot » et
 # « Mona » sont réservés), intégrées pour ne rien télécharger.
@@ -150,7 +150,7 @@ def load_settings():
 
 LANGS = ("auto", "fr", "en")
 _I18N_EN = {'impossible avec les bobines chargées': 'not possible with the loaded spools', 'aucune répartition possible sur les têtes': 'no possible head assignment', 'aucune répartition par couche possible': 'no per-layer assignment possible', 'aucune disposition par couche possible': 'no per-layer layout possible', 'plus de 4 couleurs dans une couche': 'more than 4 colours in a layer', 'trop de couleurs pour les têtes': 'too many colours for the heads', 'durée estimée par la U1': 'time estimated by the U1', 'd’échanges': 'of swaps', 'dont': 'incl.', 'purge': 'purge', 'impossible': 'not possible', ' filament(s) du projet non utilisé(s) dans ce fichier : masqué(s).': ' project filament(s) not used in this file: hidden.', 'autre copie': 'another copy', 'HAUT DÉBIT': 'HIGH FLOW', 'TRÈS HAUT DÉBIT': 'ULTRA HIGH FLOW', 'Avant de trancher': 'Before slicing', 'en attente': 'waiting', 'terminé': 'done', 'échoué': 'failed', 'annulé': 'cancelled', 'annulée': 'cancelled', 'nom de couleur proche': 'close colour name', 'couleur proche (nuance)': 'close colour (shade)', 'Automatique': 'Automatic', 'Retire %s de ACE': 'Remove %s from ACE', 'Par couche (layer)': 'Per layer (layer)', 'Disposition finale :': 'Final layout:', 'Au lancement': 'Print start', 'en place': 'in place', 'source inconnue': 'unknown source', 'Couleur': 'Colour', 'Marque': 'Brand', 'Poids': 'Weight', 'g restants': 'g left', 'buse': 'nozzle', 'absente': 'missing', 'Plans': 'Plans', 'Têtes': 'Heads', 'Calibration': 'Calibration', 'Mode': 'Mode', 'déconnecté': 'disconnected', 'Vérification': 'Check', 'Fichier': 'File', 'impression': 'printing', 'en impression': 'printing', 'pause': 'paused', 'Remplir': 'Fill', 'Charger tout': 'Load all', 'Tout charger': 'Load all', 'h restantes': 'h left', 'min restantes': 'min left', 'restant': 'left', 'restante': 'left', ' : ': ': ', ' ?': '?', ' ;': ';', 'Séchage': 'Drying', 'Bobine': 'Spool', 'Correspondance': 'Match', 'Actualiser': 'Refresh', 'Humidité dans l’ACE': 'Humidity in the ACE', 'Température dans l’ACE': 'Temperature in the ACE', 'Supprime la saisie manuelle': 'Removes the manual entry', 'sur T': 'on T', 'sur': 'on', 'Charge cette bobine sur T': 'Loads this spool on T', 'Bobine de la table multiACE associée à ce slot (utile sans RFID : poids, calibration PA mémorisée)': 'Spool from the multiACE table linked to this slot (useful without RFID: weight, stored PA calibration)', '« ': '“', ' »': '”', '«': '“', '»': '”', 'Confirmer ?': 'Confirm?', 'Agrandir': 'Expand', 'Retirer': 'Remove', 'Afficher': 'Show', 'hors ligne': 'offline', 'en cours': 'running', 'Adresse invalide': 'Invalid address', 'Déplacer cette carte': 'Move this card', '↑ en haut': '↑ to top', '↓ en bas': '↓ to bottom', 'Clique pour toucher l’écran de la U1': 'Click to touch the U1 screen', 'en haut': 'top', 'en bas': 'bottom', 'Recalculer avec mes choix': 'Recompute with my choices', 'Imprimer': 'Print', "multiACE : envoi direct a l'imprimante, Preflight non utilise": 'multiACE: direct upload to the printer, Preflight not used', 'multiACE : G-code deja traite par multiACE (script de post-traitement actif ?), non envoye': 'multiACE: G-code already processed by multiACE (post-processing script active?), not sent', 'multiACE : deja traite': 'multiACE: already processed', 'multiACE : %d filament(s) utilise(s), envoi reserve a %d et plus': 'multiACE: %d filament(s) used, sending is for %d or more', "Langue enregistrée : ferme et rouvre le panneau (ou redémarre OrcaSlicer) pour l'appliquer partout. / Language saved: close and reopen the panel (or restart OrcaSlicer) to apply it everywhere.": 'Language saved: close and reopen the panel (or restart OrcaSlicer) to apply it everywhere.', 'Clique sur une bobine pour modifier sa couleur, sa matière ou son poids. Clique deux fois sur un bouton pour confirmer une action. Charger / échanger / décharger / sécher / calibrer s’enchaînent dans une file d’attente (« Arrêter » le séchage part tout de suite).': 'Click a spool to change its colour, material or weight. Click a button twice to confirm an action. Load / swap / unload / dry / calibrate run one after another in a queue (“Stop” drying runs right away).', "Si un ACE se déconnecte puis revient : le plugin relance son séchage là où il en était, et pendant une impression il relance la poussée du filament, uniquement pour la tête qui imprime (si multiACE ne l'a pas déjà fait).": "If an ACE disconnects and comes back: the plugin restarts its drying where it was, and during a print it restarts the filament feed, only for the printing head (if multiACE hasn't already done it).", 'Choisis une bobine dans la dernière colonne pour imposer ta couleur : la U1 l’applique tel quel (comme dans son Preflight) et recalcule « Optimisé » et « Par couche » autour de ton choix. Le type de buse de chaque tête est rappelé.': 'Pick a spool in the last column to force your colour: the U1 applies it as is (like in its Preflight) and recomputes “Optimized” and “Per layer” around your choice. Each head’s nozzle type is shown.', "À l'export, le plugin exécute dans Orca le Preflight fourni par ta U1 (code multiACE de ta version), vérifie tout puis imprime. Décoché : le fichier d'origine part dans le Preflight de multiACE, sans rien exécuter.": 'On export, the plugin runs inside Orca the Preflight served by your U1 (your multiACE version’s code), checks everything, then prints. Unticked: the original file goes to multiACE’s Preflight and nothing is run.', "Quand l'imprimante est une U1 et que le profil de traitement n'a pas l'étape « multiACE : envoyer au Preflight », le plugin l'ajoute. Le profil devient « modifié » : enregistre-le pour la garder.": 'When the printer is a U1 and the process preset lacks the “multiACE : envoyer au Preflight” step, the plugin adds it. The preset becomes “modified”: save it to keep the step.', "Calibration de ACE %d · slot %d sur T%d ajoutée à la file du panneau multiACE. Attends qu'elle soit finie, puis « Recharger » : le PA est mémorisé sur la bobine.": 'Calibration of ACE %d · slot %d on T%d added to the multiACE panel queue. Wait until it’s done, then “Reload”: the PA is stored on the spool.', "multiACE : acces reseau non autorise depuis le tranchage. Ouvre l'onglet multiACE, clique Enregistrer pour autoriser %s, puis renvoie depuis l'onglet.": 'multiACE: network access not allowed from slicing. Open the multiACE tab, click Save to allow %s, then resend from the tab.', 'multiACE : ce G-code a ete modifie par U1 Control ("U1 print setup"). Decoche-le pour ce profil afin que multiACE recoive l\'export original.': 'multiACE: this G-code was modified by U1 Control ("U1 print setup"). Untick it for this preset so multiACE gets the original export.', "OrcaSlicer n'a pas autorisé le plugin à ouvrir ses fichiers. Réexporte et réponds « Oui » à la demande d'autorisation (événement « open »).": 'OrcaSlicer didn’t allow the plugin to open its files. Export again and answer “Yes” to the permission request (“open” event).', 'Terminé : %s. Le capteur de %s indique encore du filament : si la tête est bien vide, ignore ce message ; sinon retire le reste à la main.': 'Done: %s. The %s sensor still reports filament: if the head is really empty, ignore this; otherwise remove the rest by hand.', 'Chargement automatique : les têtes vides ou avec une autre bobine au départ sont chargées depuis les ACE avant la première couche (': 'Auto-load: heads that are empty or hold another spool at start are loaded from the ACEs before the first layer (', "OrcaSlicer a bloqué l'accès réseau vers %s. Clique « Autoriser et réessayer » et accepte la demande d'OrcaSlicer (une seule fois).": 'OrcaSlicer blocked network access to %s. Click “Allow and retry” and accept OrcaSlicer’s request (only once).', 'OrcaSlicer te demande une autorisation pour le plugin (événement « open ») : réponds « Oui », la préparation continue toute seule.': 'OrcaSlicer is asking you for a permission for the plugin (“open” event): answer “Yes”, preparation goes on by itself.', "T%d : la poussée de l'ACE %d ne reprend pas après %d essais. Vérifie l'ACE (câble, hub) ; l'impression continue sans aide.": 'T%d: ACE %d feed doesn’t resume after %d tries. Check the ACE (cable, hub); the print goes on without assist.', 'Cette version de multiACE ne permet pas d’imposer une bobine depuis Orca : utilise « Ouvrir dans le Preflight multiACE ».': 'This multiACE version doesn’t allow forcing a spool from Orca: use “Open in multiACE Preflight”.', "Si la U1 n'a pas fait son homing, le plugin le fait tout seul avant de charger / échanger / décharger, sans te demander.": 'If the U1 isn’t homed, the plugin homes it by itself before load / swap / unload, without asking.', "%s : la U1 n'est pas référencée (homing). Clique « Faire le homing puis reprendre » : la U1 fait son Home puis reprend.": '%s: the U1 isn’t homed. Click “Home then resume”: the U1 homes and then resumes.', "la U1 n'est pas référencée (l'écran affiche « Axis Movement Anomaly ») : il faut un homing avant de bouger les têtes.": 'the U1 isn’t homed (the screen shows “Axis Movement Anomaly”): homing is needed before moving the heads.', '⚠ Pas de chargement automatique dans le fichier : vérifie que les bonnes bobines sont sur les têtes avant de lancer.': '⚠ No auto-load in the file: check the right spools are on the heads before printing.', 'Ancien profil « Snapmaker U1 multiACE » supprimé (il disparaît de la liste au plus tard au prochain démarrage).': 'Old “Snapmaker U1 multiACE” profile removed (it disappears from the list at the latest on next start).', "la U1 est %s : action refusée. Regarde l'écran de la U1 et l'interface multiACE, puis clique « Reprendre ».": 'the U1 is %s: action refused. Check the U1 screen and the multiACE interface, then click “Resume”.', 'Chargement automatique au départ : %s (têtes vides ou avec une autre bobine chargées avant la 1re couche).': 'Auto-load at start: %s (empty heads or heads with another spool loaded before the 1st layer).', "multiACE : impression préparée par le Preflight de la U1 (envoi direct d'OrcaSlicer annulé, c'est normal).": 'multiACE: print prepared by the U1 Preflight (OrcaSlicer’s direct upload cancelled, that’s normal).', '(le profil palpe tout le plateau : ajoute MESH_MIN / MESH_MAX, rien ne change si ton profil le fait déjà)': '(the preset probes the whole bed: adds MESH_MIN / MESH_MAX, nothing changes if your preset already does it)', "multiACE : envoi au Preflight impossible (%s). Le G-code est garde : renvoie-le depuis l'onglet multiACE.": 'multiACE: sending to the Preflight failed (%s). The G-code is kept: resend it from the multiACE tab.', "T%d ne reçoit plus de poussée de l'ACE %d, mais ce n'est pas l'ACE actif : rien envoyé par sécurité.": 'T%d no longer gets feed from ACE %d, but it isn’t the active ACE: nothing sent, for safety.', 'multiACE : adresse de la U1 inconnue : renseigne-la dans le panneau ACE (Options → Adresse de la U1)': 'multiACE: U1 address unknown: set it in the ACE panel (Options → U1 address)', "Chauffe le plateau, attend 2 min, mesure le maillage (AUTO_BED_MESH_CALIBRATE) ; la U1 l'enregistre": 'Heats the bed, waits 2 min, probes the mesh (AUTO_BED_MESH_CALIBRATE); the U1 saves it', 'Adresse de la U1 non renseignee : entre son IP dans le panneau ACE (Options → Adresse de la U1).': 'U1 address not set: enter its IP in the ACE panel (Options → U1 address).', "place d'abord les bobines comme dans la « Disposition finale » (filament %s), puis « Recharger »": 'first place the spools as in the “Final layout” (filament %s), then “Reload”', 'Pour OrcaSlicer, le filament N part sur TN ; en vrai, il part sur la tête du slot de sa bobine.': 'For OrcaSlicer, filament N goes to TN; in reality it goes to the head of its spool’s slot.', "ACE %d : le séchage s'est arrêté avant la fin (il restait %d min à %d °C). Coupure de l'ACE ?": 'ACE %d: drying stopped before the end (%d min left at %d °C). ACE dropout?', 'si besoin, puis mesure son PA (FLOW_CALIBRATE) et le mémorise sur la bobine pour cette buse': 'if needed, then measures its PA (FLOW_CALIBRATE) and stores it on the spool for this nozzle', "Entre l'adresse IP de ta U1 (affichée dans ses réglages réseau, par exemple 192.168.1.50).": 'Enter your U1’s IP address (shown in its network settings, e.g. 192.168.1.50).', "Klipper n'est pas prêt sur la U1 (redémarrage ou erreur en cours) : attends puis réessaie.": 'Klipper isn’t ready on the U1 (restart or error in progress): wait and try again.', '(après les calibrations : 100 mm/s, accélération réduite, buse remontée de 5 mm avant)': '(after calibrations: 100 mm/s, reduced acceleration, nozzle lifted 5 mm first)', ". Envoi direct d'OrcaSlicer annule : lance l'impression depuis le Preflight multiACE.": '. OrcaSlicer’s direct upload cancelled: start the print from the multiACE Preflight.', "%s envoyé sur la U1 sans lancer (%s) : lance-le depuis l'écran ou Fluidd.%s": '%s sent to the U1 without printing (%s): start it from the screen or Fluidd.%s', "Vérification : %s. Le fichier d'origine part dans le Preflight de multiACE.": 'Check: %s. The original file goes to the multiACE Preflight.', "les bobines ont changé depuis l'analyse : vérifie la nouvelle proposition": 'spools changed since the analysis: check the new proposal', 'Homing automatique activé : la U1 fera son homing toute seule si besoin.': 'Auto homing on: the U1 will home by itself when needed.', 'La U1 ne donne pas ses buses (firmware ancien) : ta saisie est utilisée.': 'The U1 doesn’t report its nozzles (old firmware): your input is used.', 'Buses de diamètres différents dans ce fichier : vérifie la proposition.': 'Nozzles of different diameters in this file: check the proposal.', 'Garde-fou activé : séchage et poussée relancés si un ACE se déconnecte.': 'Guard on: drying and feed restarted if an ACE disconnects.', ') : garde une seule copie de multiACE Bridge dans Fichier → Plugins.': '): keep a single copy of multiACE Bridge in File → Plugins.', "Pas de multiACE à %s : vérifie l'adresse (la U1 est-elle allumée ?)": 'No multiACE at %s: check the address (is the U1 on?)', 'Export : Preflight de la U1 exécuté dans Orca, avec vérifications.': 'Export: U1 Preflight run inside Orca, with checks.', "L'étape Preflight sera ajoutée aux profils de traitement de la U1.": 'The Preflight step will be added to the U1 process presets.', 'Vérification : %s. Utilise « Ouvrir dans le Preflight multiACE ».': 'Check: %s. Use “Open in multiACE Preflight”.', "les bobines imposées ne s'appliquent qu'au plan « Comme tranché »": 'forced spools only apply to the “As sliced” plan', 'Associe une bobine pour mémoriser le poids et la calibration PA.': 'Link a spool to store the weight and the PA calibration.', 'Indique une seule fois la buse vissée sur chaque tête de ta U1 :': 'Set once the nozzle fitted on each head of your U1:', 'multiACE : %d filament(s) utilise(s), envoi reserve a %d et plus': 'multiACE: %d filament(s) used, sending is for %d or more', 'multiACE : préparation avec le code multiACE de la U1 pour "%s"': 'multiACE: preparing with the U1’s multiACE code for "%s"', 'tête(s)), par le code multiACE de la U1. Vérifié avant l’envoi.': 'head(s)), by the U1’s multiACE code. Checked before sending.', 'Étape « multiACE : envoyer au Preflight » ajoutée au profil «': 'Step “multiACE : envoyer au Preflight” added to preset “', "cette version de multiACE ne permet pas d'imposer une bobine": 'this multiACE version doesn’t allow forcing a spool', "le fichier préparé n'a pas la marque multiACE : envoi annulé": 'the prepared file lacks the multiACE mark: sending cancelled', "Export : fichier d'origine envoyé au Preflight de multiACE.": 'Export: original file sent to the multiACE Preflight.', '%s a changé (%s) : version de multiACE non prise en charge': '%s changed (%s): multiACE version not supported', 'ACE %d revenu : séchage relancé (%d °C, %d min restantes).': 'ACE %d back: drying restarted (%d °C, %d min left).', 'Masquer le panneau (une notification permet de le rouvrir)': 'Hide the panel (a notification lets you reopen it)', 'Ajouté à la file d’attente : tu peux en ajouter d’autres.': 'Added to the queue: you can add more.', 'En partie lues dans la U1 ; le reste vient de ta saisie :': 'Partly read from the U1; the rest comes from your input:', 'Cliquer pour déplier / replier : couleur, matière, poids': 'Click to unfold / fold: colour, material, weight', 'bobine choisie absente des ACE : recharge la proposition': 'chosen spool not in the ACEs: reload the proposal', 'dans Paramètres › Firmware de la U1 (firmware Extended).': 'in the U1’s Settings › Firmware (Extended firmware).', 'Homing automatique désactivé : le panneau te demandera.': 'Auto homing off: the panel will ask you.', "La U1 termine une opération : l'action suivante attend…": 'The U1 is finishing an operation: the next action waits…', 'ce mode de têtes se règle dans le Preflight de multiACE': 'this head mode is set in the multiACE Preflight', 'une tête est en mode manuel : attribution indisponible': 'a head is in manual mode: assignment unavailable', 'Options (adresse de la U1, homing, garde-fou, export)': 'Options (U1 address, homing, guard, export)', '⚠ Mets ça à gauche (Imprimante → Buse) puis tranche :': '⚠ Set this on the left (Printer → Nozzle) then slice:', 'Le lancement attend que les bobines soient en place.': 'Printing waits until the spools are in place.', 'la U1 imprime : pas de homing pendant une impression': 'the U1 is printing: no homing during a print', 'le fichier utilise une bobine absente : envoi annulé': 'the file uses a missing spool: sending cancelled', 'reponse illisible de %s (multiACE est-il installe ?)': 'unreadable answer from %s (is multiACE installed?)', '%s absent (multiACE trop ancien pour cette méthode)': '%s missing (multiACE too old for this method)', 'Le plugin ne touche plus aux profils de traitement.': 'The plugin no longer touches process presets.', 'Étape Preflight : imprimante active autre que la U1': 'Preflight step: active printer is not the U1', ') : aucune bobine de cette couleur dans les ACE.': '): no spool of this colour in the ACEs.', "Garde-fou : relancer après une déconnexion d'ACE": 'Guard: restart after an ACE disconnect', "Préparer l'export avec le code multiACE de la U1": 'Prepare the export with the U1’s multiACE code', "Fichier d'origine envoyé au Preflight multiACE.": 'Original file sent to the multiACE Preflight.', 'Température et durée : dans le panneau complet.': 'Temperature and duration: in the full panel.', 'échange multiACE en cours depuis plus de 10 min': 'multiACE swap running for more than 10 min', '. Le plugin affiche et applique, la U1 décide.': '. The plugin shows and applies, the U1 decides.', "Ajouter l'étape Preflight aux profils de la U1": 'Add the Preflight step to the U1 presets', 'Mets une bobine dans ce slot pour l’utiliser.': 'Put a spool in this slot to use it.', '» : enregistre-le (disquette) pour la garder.': '”: save it (disk icon) to keep it.', 'ACE %d : relance du séchage impossible (%s).': 'ACE %d: drying restart failed (%s).', 'Caméra de la U1 : masquée / en haut / en bas': 'U1 camera: hidden / top / bottom', 'Pas encore de PA mémorisé pour cette bobine.': 'No PA stored for this spool yet.', 'T%d : relance de la poussée impossible (%s).': 'T%d: feed restart failed (%s).', 'multiACE : lecture du G-code impossible (%s)': 'multiACE: cannot read the G-code (%s)', 'Les bobines sont en place : tu peux lancer.': 'The spools are in place: you can print.', 'Préparation avec le code multiACE de la U1…': 'Preparing with the U1’s multiACE code…', 'code de la U1 impossible à enregistrer (%s)': 'cannot save the U1 code (%s)', 'filament(s) au-delà du 4e : non vérifié(s).': 'filament(s) beyond the 4th: not checked.', 'multiACE : "%s" envoye au Preflight de %s%s': 'multiACE: "%s" sent to the Preflight of %s%s', ': échanges de bobine pendant l’impression.': ': spool swaps during the print.', 'dossier de stockage du plugin indisponible': 'plugin storage folder unavailable', 'envoyé à multiACE, ouverture du Preflight…': 'sent to multiACE, opening the Preflight…', 'Écran de la U1 : masqué / en haut / en bas': 'U1 screen: hidden / top / bottom', 'Calcul fait par le code multiACE de ta U1': 'Computed by your U1’s multiACE code', 'Dernier export préparé par cette copie (v': 'Last export prepared by this copy (v', 'Poussée revenue sur T%d (ACE %d slot %d).': 'Feed back on T%d (ACE %d slot %d).', 'Une action est en cours : attends sa fin.': 'An action is running: wait for it to finish.', 'réponse inattendue de /preflight/livedata': 'unexpected answer from /preflight/livedata', 'T%d : poussée relancée (ACE %d slot %d).': 'T%d: feed restarted (ACE %d slot %d).', 'Température du plateau pendant la mesure': 'Bed temperature during probing', 'televersement vers la U1 impossible (%s)': 'upload to the U1 failed (%s)', '✓ buses d’OrcaSlicer OK pour tes bobines': '✓ OrcaSlicer nozzles OK for your spools', 'Déplacement doux vers la ligne d’amorce': 'Soft travel to the purge line', 'appliquer couleur / matière à la bobine': 'apply colour / material to the spool', 'la U1 ne fournit pas son Preflight (%s)': 'the U1 doesn’t serve its Preflight (%s)', 'le code de la U1 ne se charge pas (%s)': 'the U1 code doesn’t load (%s)', 'réponse inattendue de /preflight/pysrc': 'unexpected answer from /preflight/pysrc', 'Mesurées au départ (têtes chargées) :': 'Measured at start (loaded heads):', 'multiACE : renvoyer le dernier G-code': 'multiACE: resend the last G-code', '⚠ Le dernier export est passé par une': '⚠ The last export went through', 'Calibration du filament (PA) sur T%s': 'Filament (PA) calibration on T%s', 'Ouverture du panneau impossible : %s': 'Cannot open the panel: %s', 'Étape Preflight : ajout impossible (': 'Preflight step: cannot add it (', 'Caméra indisponible pour le moment.': 'Camera unavailable for now.', 'Modifier couleur / matière / poids…': 'Edit colour / material / weight…', 'le Preflight de la U1 a échoué (%s)': 'the U1 Preflight failed (%s)', "Aucun G-code garde pour l'instant.": 'No G-code kept yet.', 'Calibration du flux (PA) au départ': 'Flow (PA) calibration at start', 'J’ai placé les bobines : recharger': 'I placed the spools: reload', 'Reprise de la file (%d action(s)).': 'Queue resumed (%d action(s)).', '⚠ Buses à régler dans OrcaSlicer :': '⚠ Nozzles to set in OrcaSlicer:', 'Ouvrir dans le Preflight multiACE': 'Open in multiACE Preflight', '· arrive en cours d’impression (T': '· arrives during the print (T', '✓ Étape Preflight présente dans «': '✓ Preflight step present in “', '(aucune bobine associée au slot)': '(no spool linked to the slot)', 'Déchargement de toutes les têtes': 'Unloading all heads', 'Homing automatique si nécessaire': 'Auto homing when needed', 'multiACE : pas de fichier G-code': 'multiACE: no G-code file', '"%s" envoye au Preflight de %s.': '"%s" sent to the Preflight of %s.', 'Chargement T%s ← ACE %s slot %s': 'Loading T%s ← ACE %s slot %s', 'Calibration du plateau (%s °C)': 'Bed calibration (%s °C)', 'Faire le homing puis reprendre': 'Home then resume', "la U1 n'a pas répondu à temps.": 'the U1 didn’t answer in time.', ': aucune bobine dans les ACE.': ': no spool in the ACEs.', 'Bobine absente des ACE pour :': 'Spool missing from the ACEs for:', 'Envoyer sur la U1 sans lancer': 'Send to the U1 without printing', 'Toujours en cours sur la U1 :': 'Still running on the U1:', 'Une action est deja en cours.': 'An action is already running.', 'multiACE - Preflight de la U1': 'multiACE - U1 Preflight', 'occupée depuis plus de 10 min': 'busy for more than 10 min', 'Adresse de la U1 introuvable': 'U1 address not found', 'Impression lancée avec %s.%s': 'Print started with %s.%s', 'Rien à faire sur cette tête.': 'Nothing to do on this head.', 'tête(s) chargée(s) au départ': 'head(s) loaded at start', 'Échange T%s ← ACE %s slot %s': 'Swap T%s ← ACE %s slot %s', 'Étape Preflight absente de «': 'Preflight step missing from “', '(méthode de multiACE 1.27b)': '(multiACE 1.27b method)', "Modifier l'adresse de la U1": 'Change the U1 address', 'même matière, autre couleur': 'same material, other colour', 'Écran distant indisponible.': 'Remote screen unavailable.', 'Étape Preflight ajoutée à «': 'Preflight step added to “', '✓ Buses OK pour tes bobines': '✓ Nozzles OK for your spools', '(disquette) pour la garder': '(disk icon) to keep it', 'Calibrer cette bobine (PA)': 'Calibrate this spool (PA)', 'Séchage ACE %s (%s °C, %s)': 'Drying ACE %s (%s °C, %s)', 'seulement la zone imprimée': 'printed area only', 'Commande envoyée à la U1…': 'Command sent to the U1…', 'Matière absente des ACE :': 'Material missing from the ACEs:', 'Pose de côté la bobine de': 'Set aside the spool from', 'Revenir au choix de la U1': 'Back to the U1’s choice', 'choix de bobine illisible': 'unreadable spool choice', 'code de la U1 non reconnu': 'U1 code not recognised', 'Panneau multiACE masqué.': 'multiACE panel hidden.', 'échanges de bobine (ACE)': 'spool swaps (ACE)', ': tranché pour une buse': ': sliced for nozzle', 'Arrêt du séchage ACE %s': 'Stop drying ACE %s', 'code de la U1 illisible': 'unreadable U1 code', 'code de la U1 trop gros': 'U1 code too large', 'et tes bobines imposées': 'and your forced spools', 'Calibration du plateau': 'Bed calibration', 'Comme tranché (slicer)': 'As sliced (slicer)', 'la U1 est occupée (%s)': 'the U1 is busy (%s)', '— avant la mise à jour': '— before the update', 'Adresse enregistrée :': 'Address saved:', 'Connexion à multiACE…': 'Connecting to multiACE…', 'La U1 ne répond pas à': 'The U1 doesn’t answer at', 'Ma U1 (buses vissées)': 'My U1 (fitted nozzles)', 'couleur(s) du fichier': 'colour(s) in the file', ": vérifie l'adresse.": ': check the address.', 'Garde-fou désactivé.': 'Guard off.', 'disposition proposée': 'proposed layout', 'enregistre le profil': 'save the preset', 'fichier préparé vide': 'prepared file empty', '(clic pour changer)': '(click to change)', 'Détail par filament': 'Per-filament detail', 'Lancer l’impression': 'Start the print', 'Optimisé (optimize)': 'Optimized (optimize)', 'Relancer le séchage': 'Restart drying', 'changements d’outil': 'tool changes', 'même nom de couleur': 'same colour name', 'Étape Preflight : …': 'Preflight step: …', 'ACE %d déconnecté.': 'ACE %d disconnected.', 'Adresse de la U1 :': 'U1 address:', 'Arrêter le séchage': 'Stop drying', 'Fermer les options': 'Close options', 'Réduire / agrandir': 'Collapse / expand', 'homing refusé : %s': 'homing refused: %s', 'matière différente': 'different material', 'pas de PA mémorisé': 'no stored PA', 'sur la même tête T': 'on the same head T', '+ Nouvelle bobine': '+ New spool', 'Ajoutée à la file': 'Added to the queue', 'Aucune (détacher)': 'None (detach)', 'Caméra de la U1 :': 'U1 camera:', 'Envoi annulé : %s': 'Sending cancelled: %s', 'Forcer une bobine': 'Force a spool', 'Lues dans la U1 :': 'Read from the U1:', 'Time-lapse caméra': 'Camera time-lapse', 'Têtes déjà vides.': 'Heads already empty.', '· avant tes choix': '· before your choices', '· lues dans la U1': '· read from the U1', '(choix de la U1)': '(U1’s choice)', '. Rien à saisir.': '. Nothing to enter.', 'Déchargement T%s': 'Unloading T%s', 'Séchage relancé…': 'Drying restarted…', 'le plan « %s »%s': 'the “%s” plan%s', 'pas dans les ACE': 'not in the ACEs', 'Écran de la U1 :': 'U1 screen:', 'échange en cours': 'swap in progress', '(aucune bobine)': '(no spool)', ', imprimé sur T': ', printed on T', 'Déjà en place :': 'Already in place:', 'Homing terminé.': 'Homing done.', 'Revenir au RFID': 'Back to RFID', 'Très haut débit': 'Ultra high flow', 'après la file :': 'after the queue:', 'bobine partagée': 'shared spool', 'Calibrer avant': 'Calibrate before', 'Dans l’ordre :': 'In order:', 'E3D haut débit': 'E3D high flow', 'File d’attente': 'Queue', 'TPU haut débit': 'TPU high flow', 'Tout décharger': 'Unload all', 'non renseignée': 'not set', 'tranché pour T': 'sliced for T', 'PA mémorisé :': 'Stored PA:', 'Vider la file': 'Clear the queue', 'aucune bobine': 'no spool', 'cette adresse': 'this address', 'choix manuel': 'manual choice', 'du plugin (v': 'of the plugin (v', 'déchargement': 'unloading', 'en déplaçant': 'by moving', 'pas utilisée': 'unused', 'sans adresse': 'no address', 'sans capteur': 'no sensor', 'à mettre ici': 'to move here', 'Décharger T': 'Unload T', 'Déjà vide :': 'Already empty:', 'Enregistrer': 'Save', 'PA mémorisé': 'Stored PA', 'Bleu clair': 'Light blue', 'Bleu foncé': 'Dark blue', 'Cyan clair': 'Light cyan', 'Gris clair': 'Light grey', 'Gris foncé': 'Dark grey', 'Haut débit': 'High flow', 'Vert clair': 'Light green', 'Vert foncé': 'Dark green', 'au lieu de': 'instead of', 'déconnecté': 'disconnected', 'haut débit': 'high flow', 'm utilisés': 'm used', 'ont changé': 'changed', 'prévue sur': 'planned on', '· à régler': '· to set', 'Échec : %s': 'Failed: %s', 'échange(s)': 'swap(s)', 'Décharger': 'Unload', 'Recharger': 'Reload', 'Terminé :': 'Done:', 'Turquoise': 'Turquoise', 'bobine(s)': 'spool(s)', 'matière ≠': 'material ≠', '🔥 Séchage': '🔥 Drying', ', puis :': ', then:', 'Bordeaux': 'Burgundy', 'Modifier': 'Edit', 'Échanger': 'Swap', 'à mettre': 'to move', 'Annuler': 'Cancel', 'Arrêter': 'Stop', 'Charger': 'Load', 'Lavande': 'Lavender', 'Matière': 'Material', 'Réduire': 'Collapse', 'chargée': 'loaded', 'libérée': 'freed', 'masquée': 'hidden', '· reste': '· left', 'Fermer': 'Close', 'Lancer': 'Start', 'Marron': 'Brown', 'Plan «': 'Plan “', 'Sécher': 'Dry', 'Violet': 'Purple', 'aucune': 'none', 'déduit': 'deduced', 'masqué': 'hidden', '· slot': '· slot', 'Blanc': 'White', 'Crème': 'Cream', 'Jaune': 'Yellow', 'Pêche': 'Peach', 'Rouge': 'Red', 'Têtes': 'Heads', 'prête': 'ready', '· sur': '· on', 'échec': 'failed', 'Bleu': 'Blue', 'Gris': 'Grey', 'Kaki': 'Khaki', 'Noir': 'Black', 'Rose': 'Pink', 'Vert': 'Green', 'vide': 'empty'}
-_I18N_EN.update({'\xa0:': ':', 'action en cours': 'action running', 'prête': 'ready', 'Ensuite :': 'Then:', 'En attente :': 'Waiting:', 'Buse à régler dans Orca :': 'Nozzle to set in Orca:', '(Imprimante, puis Buse), puis tranche.': '(Printer, then Nozzle), then slice.', 'n’est dans aucun ACE. Le lancement te dira où le poser.': 'isn’t in any ACE. The print start will tell you where to put it.', 'filament(s) au-delà du 4e ont une autre bobine dans leur voie multiACE (voir « Filaments 5 et plus »).': 'filament(s) beyond the 4th have another spool in their multiACE lane (see “Filaments 5 and up”).', 'Pour OrcaSlicer, le filament N part sur TN ; en vrai, il part sur la tête de la voie de sa bobine.': 'For OrcaSlicer, filament N goes to TN; in reality it goes to the head of its spool’s lane.', ', lues dans la U1': ', read from the U1', 'Filaments 5 et plus (outils virtuels multiACE)': 'Filaments 5 and up (multiACE virtual tools)', 'Lancer le séchage': 'Start drying', 'Sécher': 'Dry', ', reste': ', remaining', 'ensuite': 'then', 'chargeur U1': 'U1 feeder', 'manuel': 'manual', 'échec': 'failed', 'La buse réglée dans Orca n’est pas celle de la U1': 'The nozzle set in Orca isn’t the U1’s', 'change-la dans Imprimante, puis Buse.': 'change it in Printer, then Nozzle.', 'Voie vide': 'Empty lane', 'Chemin pas encore calibré': 'Path not calibrated yet', 'Cette bobine est dans T': 'This spool is in T', 'après la file.': 'after the queue.', 'a déjà le': 'already has the', 'de l’ACE': 'from ACE', 'est vide.': 'is empty.', 'Ce chemin n’est pas encore calibré. Calibre-le dans multiACE': 'This path isn’t calibrated yet. Calibrate it in multiACE', 'Config, puis Calibration.': 'Config, then Calibration.', 'Charger dans T': 'Load into T', 'Échanger dans T': 'Swap into T', 'Calibrer le débit': 'Calibrate flow', 'Mets une bobine dans cette voie pour l’utiliser.': 'Put a spool in this lane to use it.', 'Clique sur une bobine ou une tête pour agir. Clique deux fois sur un bouton pour confirmer. Les actions s’enchaînent dans une file d’attente.': 'Click a spool or a head to act. Click a button twice to confirm. Actions run one after another in a queue.', 'Couleur invalide (format #RRGGBB).': 'Invalid colour (format #RRGGBB).', 'Enregistrement…': 'Saving…', 'Envoi…': 'Sending…', 'Aucun ACE.': 'No ACE.', 'Fermer': 'Close', 'voie': 'lane', 'Voie': 'Lane', 'vers T': 'to T', 'restants': 'left', 'vide': 'empty', 'libre': 'free', 'Chargement de T%s : ACE %s, voie %s': 'Loading T%s: ACE %s, lane %s', 'Échange sur T%s : ACE %s, voie %s': 'Swap on T%s: ACE %s, lane %s', 'Plans calculés par le multiACE': 'Plans computed by the multiACE', 'de ta U1': 'of your U1', 'Plan d’impression': 'Print plan', 'La U1 a calculé': 'The U1 computed', 'façons de répartir les bobines.': 'ways to share out the spools.', 'Calculé avec tes bobines imposées.': 'Computed with your forced spools.', 'Calcul avec tes choix…': 'Computing with your choices…', 'Au fil de l’impression': 'Over the print', 'Durée': 'Time', 'Échanges': 'Swaps', 'Purge': 'Purge', 'Comme tranché': 'As sliced', 'Optimisé': 'Optimized', 'Par couche': 'Per layer', 'Chaque filament garde la tête choisie dans Orca.': 'Each filament keeps the head chosen in Orca.', 'La U1 choisit où poser chaque bobine pour limiter les échanges.': 'The U1 picks where each spool goes to cut swaps.', 'Jamais deux couleurs d’une couche sur la même tête.': 'Never two colours of one layer on the same head.', 'En déplaçant des bobines.': 'By moving spools.', 'Impossible ici': 'Not possible here', 'Une barre par tête, longue comme l’impression. Chaque changement de couleur dans une barre est un échange de bobine.': 'One bar per head, as long as the print. Each colour change in a bar is a spool swap.', 'Choisir les bobines moi-même': 'Choose the spools myself', 'Masquer mes bobines': 'Hide my spools', 'la U1 recalcule durée et échanges avec tes choix': 'the U1 recomputes time and swaps with your choices', 'Avant de lancer': 'Before printing', 'gestes': 'moves', 'geste': 'move', 'Dans cet ordre. Les numéros sont sur la carte.': 'In this order. The numbers are on the map.', 'pose une bobine': 'put a spool', 'Sors d’abord le': 'First take out the', 'C’est fait': 'Done', 'fait': 'done', 'Après l’avoir posée : la voie reçoit cette couleur et cette matière (une bobine RFID se relit seule)': 'Once it’s in: the lane gets this colour and material (an RFID spool is read again by itself)', 'Après l’avoir posée : sa couleur, sa matière et sa bobine de la table multiACE suivent dans la nouvelle voie (une bobine RFID se relit seule)': 'Once it’s in: its colour, material and multiACE table spool follow it to the new lane (an RFID spool is read again by itself)', 'Sans rien déplacer, la U1 imprimerait': 'Without moving anything, the U1 would print', 'le filament': 'filament', 'avec': 'with', 'Pour l’accepter, impose ces bobines avec « Choisir les bobines moi-même ».': 'To accept it, force these spools with “Choose the spools myself”.', 'Bobines pour le plan': 'Spools for the plan', 'Bobines utilisées': 'Spools used', 'à déplacer': 'to move', 'à poser': 'to put', 'à sortir des ACE': 'to take out of the ACEs', 'Avec tes bobines imposées.': 'With your forced spools.', 'Dans les ACE, comme maintenant.': 'In the ACEs, as they are now.', 'À sortir des ACE': 'Take out of the ACEs', 'Placer pas à pas': 'Place step by step', 'Un geste à la fois, avec un bouton « C’est fait » pour chacun.': 'One move at a time, with a “Done” button for each.', 'échanges de bobine sur cette tête': 'spool swaps on this head', 'Au départ': 'At start', 'ajoute MESH_MIN / MESH_MAX si ton profil palpe tout le plateau': 'adds MESH_MIN / MESH_MAX if your preset probes the whole bed', 'Débit (PA) au départ': 'Flow (PA) at start', ', arrive pendant l’impression (T': ', arrives during the print (T', '(aucune bobine associée à la voie)': '(no spool linked to the lane)', 'Trajet doux vers la purge': 'Soft travel to the purge', '100 mm/s, buse levée de 5 mm, après les calibrations': '100 mm/s, nozzle lifted 5 mm, after calibrations', 'Timelapse': 'Time-lapse', 'caméra de la U1': 'U1 camera', 'Chargement automatique : les têtes vides ou avec une autre bobine au départ sont chargées depuis les ACE avant la première couche, par le code multiACE de la U1.': 'Auto-load: heads that are empty or hold another spool at start are loaded from the ACEs before the first layer, by the U1’s multiACE code.', 'Place les bobines d’abord : le lancement attend que les bobines soient en place.': 'Place the spools first: printing waits until the spools are in place.', 'La U1 vérifie tout avant de démarrer.': 'The U1 checks everything before starting.', 'Mettre en file multiACE': 'Put in the multiACE queue', 'File d’impression de multiACE (Print Hub) : tu lances depuis multiACE quand tu veux': 'multiACE print queue (Print Hub): start it from multiACE whenever you like', 'Autres actions': 'More actions', 'Placer les bobines': 'Place the spools', 'pour': 'for', 'Un geste à la fois.': 'One move at a time.', 'Geste': 'Move', 'Sors-la de': 'Take it out of', 'Prends une bobine': 'Take a spool', 'Pose-la dans': 'Put it in', 'Même voie, autre ACE : elle alimentera toujours T': 'Same lane, other ACE: it still feeds T', 'Elle alimentera T': 'It will feed T', 'Cette couleur n’est dans aucun ACE.': 'This colour isn’t in any ACE.', 'Si elle est chargée dans une tête, décharge-la d’abord dans le panneau.': 'If it’s loaded in a head, unload it first in the panel.', 'pose-la ici': 'put it here', 'Geste en cours': 'Current move', 'Gestes suivants': 'Next moves', 'À sortir de l’ACE': 'Take out of the ACE', 'Chaque « C’est fait » met à jour les bobines dans la U1.': 'Each “Done” updates the spools in the U1.', 'Revenir au plan': 'Back to the plan', 'neuve': 'new', 'à sortir': 'to take out', 'Pose de côté la bobine de': 'Set aside the spool from', '(elle sera remise ensuite)': '(it goes back later)', ' couleurs différentes du projet': ' colours differ from the project', ' couleur différente du projet': ' colour differs from the project', ' couleurs différentes': ' colours differ', ' couleur différente': ' colour differs', 'Couleur différente du projet': 'Colour differs from the project', ') sera imprimé en ': ') will print in ', 'couleur inconnue': 'unknown colour', ', ton choix': ', your choice', 'Ces couleurs ne sont pas dans les ACE. ': 'These colours aren’t in the ACEs. ', 'Tu peux quand même lancer ou mettre en file.': 'You can still start or queue it.', 'Tu peux quand même lancer.': 'You can still start it.', ' Pour les bonnes couleurs, pose les bobines dans les ACE puis «\xa0Recharger\xa0» (menu ⋯).': ' For the right colours, put the spools in the ACEs, then “Reload” (⋯ menu).', '(remplace ': '(replaces ', ' Pour les bonnes couleurs, suis le plan Optimisé\xa0: il te dit où poser chaque bobine manquante, pas à pas.': ' For the right colours, follow the Optimized plan: it tells you where to put each missing spool, step by step.', 'Choisir le plan Optimisé': 'Choose the Optimized plan', 'À poser pour les bonnes couleurs': 'To place for the right colours', ' est vide.': ' is empty.', 'Charger T': 'Load T', ' depuis ACE ': ' from ACE ', '✓ Chargement de T': '✓ Loading T', 'Une tête vide au départ peut arrêter la U1 (erreur 523) avant que multiACE la charge\xa0: charge-la avant de lancer, puis «\xa0Recharger\xa0».': 'An empty head at start can stop the U1 (error 523) before multiACE loads it: load it before printing, then “Reload”.', 'Au départ, multiACE charge chaque tête depuis sa voie avant la première couche. Charge quand même les têtes vides avant de lancer\xa0: la U1 peut s’arrêter avant (erreur 523).': 'At start, multiACE loads each head from its lane before the first layer. Still load empty heads before printing: the U1 can stop before that (error 523).', ' sont vides\xa0: charge avant de lancer.': ' are empty: load before printing.', ' est vide\xa0: charge avant de lancer.': ' is empty: load before printing.', "Chargement de T%d (ACE %d, voie %d) ajouté à la file du panneau : attends qu'il soit fini, puis « Recharger ».": 'Loading T%d (ACE %d, lane %d) added to the panel queue: wait until it’s done, then “Reload”.', "la bobine #%s est dans ACE %d, voie %d, et cette voie n'est pas vide. Si tu l'as déplacée ici, détache-la d'abord là-bas (Modifier, Bobine : Aucune). Sinon, choisis-la de nouveau dans la liste : une bobine pareille sera créée.": "spool #%s is in ACE %d, lane %d, and that lane isn't empty. If you moved it here, detach it there first (Edit, Spool: None). Otherwise pick it again in the list: a matching spool will be created.", 'L’ACE ': 'ACE ', ' en ACE ': ' in ACE ', '\xa0: pose une bobine ': ': put a spool of ', ', débloque T': ', unlocks T', 'voie vide': 'empty lane', 'à la place de la bobine non identifiée': 'instead of the unidentified spool', ', qui remplace le ': ', which stands in for ', ', pas utilisé': ', not used', 'à la place du ': 'instead of ', '\xa0: plus de place, il restera en ': ': no room left, it stays ', ' a des bobines, mais la U1 ne le compte pas\xa0: vérifie dans multiACE qu’il est connecté.': ' has spools but the U1 doesn’t count it: check in multiACE that it’s connected.', 'Une bobine non identifiée (ni RFID lue, ni réglée à la main) est ignorée par la U1\xa0: si c’est une bonne couleur, identifie-la dans le panneau (clic sur la bobine, puis «\xa0Modifier\xa0»).': 'An unidentified spool (no RFID read, not set by hand) is ignored by the U1: if it’s a right colour, identify it in the panel (click the spool, then “Edit”).', 'la U1 recalcule avec les bobines posées': 'the U1 recalculates with the spools you placed', 'Pour les bonnes couleurs, pose les bobines dans les ACE puis «\xa0Recharger\xa0» (menu ⋯).': 'For the right colours, put the spools in the ACEs, then “Reload” (⋯ menu).', 'remplace ': 'replaces ', 'est chargée depuis cette voie : décharge-la d’abord.': 'is loaded from this lane: unload it first.', 'Déchargement de T': 'Unloading T', 'demandé (file du panneau).': 'requested (panel queue).', "Déchargement de T%d ajouté à la file du panneau : attends qu'il soit fini, puis sors la bobine.": 'Unloading T%d added to the panel queue: wait until it’s done, then take the spool out.', 'la U1 est en mode tête (un ACE par tête)': 'the U1 is in head mode (one ACE per head)', 'multiACE est en mode multi avec': 'multiACE is in multi mode with', 'copies de couleur activées': 'colour copies on', 'tête alimentée à la main': 'hand-fed head', 'changements en arrière-plan (ace2k)': 'background swaps (ace2k)', 'une répartition par tête': 'a per-head assignment', 'le Preflight de la U1 répartit par tête': 'the U1 Preflight assigns per head', '%s : rapport de la U1 illisible pour le plugin': '%s: U1 report unreadable for the plugin', "%s : cette version de multiACE ne permet pas de l'imprimer depuis Orca": "%s: this multiACE version can't print it from Orca", "cette version de multiACE ne permet pas d'imprimer ce mode depuis Orca": "this multiACE version can't print this mode from Orca", "la bobine choisie n'est pas en %s": "the chosen spool isn't %s", "la bobine choisie est sur une tête d'une autre taille de buse": 'the chosen spool is on a head with another nozzle size', 'filament %s : aucune bobine de cette matière': 'filament %s: no spool of this material', "le plan « %s » n'est pas possible": "the “%s” plan isn't possible", 'Comme chargé (loadout)': 'As loaded (loadout)', 'Moins de mélange (color)': 'Less mixing (color)', ' Chargement automatique au départ : %s (têtes des ACE chargées avant la 1re couche).': ' Auto-load at start: %s (ACE heads loaded before the 1st layer).', 'Comme chargé': 'As loaded', 'Moins de mélange': 'Less mixing', 'Chaque couleur sur une bobine déjà en place.': 'Each colour on a spool already in place.', 'La U1 propose où poser chaque bobine pour gagner du temps.': 'The U1 proposes where to put each spool to save time.', 'La U1 limite le mélange de couleurs dans une même buse.': 'The U1 limits colour mixing in the same nozzle.', ' En posant les bobines comme indiqué.': ' By placing the spools as shown.', 'En arrière-plan\xa0: %d sur %d': 'In the background: %d of %d', '(~%d min gagnées)': '(~%d min saved)', '%d trop courts': '%d too short', '%d trop court': '%d too short', '%d sur une tête non autorisée': '%d on a head not allowed', '%d sans temps (M73)': '%d without times (M73)', 'Mélange dans une même buse\xa0: %d g': 'Mixing in the same nozzle: %d g', 'Changements en arrière-plan\xa0: une tête garée change de bobine pendant qu’une autre imprime. La purge se fait au dock\xa0: garde les wipers propres.': 'Background swaps: a parked head changes spool while another one prints. The purge happens at the dock: keep the wipers clean.', 'pour le plan Comme chargé\xa0: la U1 recalcule durée et échanges': 'for the As loaded plan: the U1 recomputes time and swaps', 'Plan Comme chargé calculé avec tes bobines imposées.': 'As loaded plan computed with your forced spools.', 'Tes choix\xa0: %s.': 'Your choices: %s.', 'aucune bobine de sa matière pour le filament %s': 'no spool of its material for filament %s', 'aucune bobine de cette matière': 'no spool of this material', 'charge-la': 'load it', ' Sur la U1 (chargeur latéral, puis l’écran), puis «\xa0Recharger\xa0».': ' On the U1 (side feeder, then the screen), then “Reload”.', ' À la main sur la U1, puis «\xa0Recharger\xa0».': ' By hand on the U1, then “Reload”.', ' À la place du %s.': ' Instead of the %s.', 'chargeur latéral de T%d': 'side feeder of T%d', 'T%d, à la main': 'T%d, by hand', 'Charge-la dans': 'Load it into', 'Le chargeur latéral se charge sur la U1\xa0: règle ensuite ce filament sur son écran.': 'The side feeder is loaded on the U1: then set this filament on its screen.', 'Charge la tête à la main sur la U1 et règle ce filament sur son écran.': 'Load the head by hand on the U1 and set this filament on its screen.', ' Il remplace le %s.': ' It replaces the %s.', ' Ensuite, «\xa0Recharger\xa0»\xa0: la U1 relit ses bobines.': ' Then “Reload”: the U1 reads its spools again.', 'charge-la ici': 'load it here', 'à changer': 'to change', 'à charger': 'to load', 'Chargeur latéral': 'Side feeder', 'non connecté': 'not connected', 'aucune alimentation': 'no feed', '(copie)': '(copy)', 'Filament %d : aucune bobine de sa matière (ACE ou chargeur latéral).': 'Filament %d: no spool of its material (ACE or side feeder).', 'T%d : l’ACE %d n’est pas connecté.': 'T%d: ACE %d isn’t connected.', 'Dans les ACE et les chargeurs, comme maintenant.': 'In the ACEs and the feeders, as now.', ' à charger dans un chargeur latéral': ' to load into a side feeder', ' à charger à la main': ' to load by hand', 'Charge son chargeur latéral sur la U1, puis «\xa0Recharger\xa0».': 'Load its side feeder on the U1, then “Reload”.', 'Charge-la à la main, puis «\xa0Recharger\xa0».': 'Load it by hand, then “Reload”.', 'multiACE ne charge que les têtes des ACE\xa0: une tête sans ACE doit être chargée avant de lancer.': 'multiACE only loads the ACE heads: a head without an ACE must be loaded before printing.', 'Au départ, multiACE charge les têtes des ACE avant la première couche.': 'At start, multiACE loads the ACE heads before the first layer.', ' Une tête sans ACE (chargeur latéral) doit déjà être chargée.': ' A head without an ACE (side feeder) must already be loaded.', ' Une tête sans ACE (à la main) doit déjà être chargée.': ' A head without an ACE (by hand) must already be loaded.', 'Ces couleurs ne sont pas dans les ACE ni les chargeurs. ': 'These colours aren’t in the ACEs or the feeders. ', 'Filament %d, il est dans le %s.': 'Filament %d, it’s in the %s.', 'Elle est dans le %s.': 'It’s in the %s.', 'Elle est sur %s.': 'It’s on %s.', 'Filament %d, il est sur %s.': 'Filament %d, it’s on %s.', 'Une bobine pareille sera créée pour cette voie.': 'A matching spool will be created for this lane.', 'Copie de ': 'Copy of ', 'Nouvelle bobine pareille au #%s pour cette voie : le #%s ne bouge pas. Son PA mémorisé est repris.': 'New spool matching #%s for this lane: #%s stays where it is. Its stored PA is copied.', 'bobine #%s introuvable dans la table multiACE': 'spool #%s not found in the multiACE table', "Nouvelle bobine pareille au #%s dans l'ACE %d, voie %d": 'New spool matching #%s in ACE %d, lane %d', 'Un geste à la fois, avec un bouton «\xa0C’est fait\xa0» pour chacun.': 'One move at a time, with a “Done” button for each.', 'Place les bobines d’abord\xa0: le lancement attend que les bobines soient en place.': 'Place the spools first: printing waits until the spools are in place.', 'Chaque «\xa0C’est fait\xa0» met à jour les bobines dans la U1.': 'Each “Done” updates the spools in the U1.', 'Durée choisie : %s. L’ACE sèche par cycles de 10 h au plus : le plugin relance le suivant tant qu’OrcaSlicer est ouvert.': 'Chosen time: %s. The ACE dries in cycles of 10 h at most: the plugin starts the next one while OrcaSlicer is open.', 'Plus de 10 h : l’ACE sèche par cycles de 10 h, relancés par le plugin. Garde OrcaSlicer ouvert.': 'Over 10 h: the ACE dries in 10 h cycles, restarted by the plugin. Keep OrcaSlicer open.', 'En\xa0pause': 'Paused', 'démarrage…': 'starting…', 'Relancer': 'Restart', 'ACE %d : nouveau cycle de séchage lancé (%d °C, encore %s).': 'ACE %d: next drying cycle started (%d °C, %s to go).', 'ACE %d : séchage relancé (%d °C, encore %s).': 'ACE %d: drying restarted (%d °C, %s to go).', 'ACE %d : le séchage ne démarre pas (encore %s prévus).': 'ACE %d: drying doesn’t start (%s still planned).', "ACE %d : le séchage s'est arrêté avant la fin du cycle (encore %s prévus). Arrêté depuis la U1 ? Il n'est pas relancé tout seul.": 'ACE %d: drying stopped before the end of the cycle (%s still planned). Stopped from the U1? It won’t restart by itself.', 'ACE %d : séchage terminé (%s).': 'ACE %d: drying finished (%s).', "ACE %d : séchage long annulé (retiré de la file d'attente).": 'ACE %d: long drying cancelled (removed from the queue).', ' par cycles de 10 h': ' in 10 h cycles'})   # refonte 0.41
+_I18N_EN.update({'\xa0:': ':', 'action en cours': 'action running', 'prête': 'ready', 'Ensuite :': 'Then:', 'En attente :': 'Waiting:', 'Buse à régler dans Orca :': 'Nozzle to set in Orca:', '(Imprimante, puis Buse), puis tranche.': '(Printer, then Nozzle), then slice.', 'n’est dans aucun ACE. Le lancement te dira où le poser.': 'isn’t in any ACE. The print start will tell you where to put it.', 'filament(s) au-delà du 4e ont une autre bobine dans leur voie multiACE (voir « Filaments 5 et plus »).': 'filament(s) beyond the 4th have another spool in their multiACE lane (see “Filaments 5 and up”).', 'Pour OrcaSlicer, le filament N part sur TN ; en vrai, il part sur la tête de la voie de sa bobine.': 'For OrcaSlicer, filament N goes to TN; in reality it goes to the head of its spool’s lane.', ', lues dans la U1': ', read from the U1', 'Filaments 5 et plus (outils virtuels multiACE)': 'Filaments 5 and up (multiACE virtual tools)', 'Lancer le séchage': 'Start drying', 'Sécher': 'Dry', ', reste': ', remaining', 'ensuite': 'then', 'chargeur U1': 'U1 feeder', 'manuel': 'manual', 'échec': 'failed', 'La buse réglée dans Orca n’est pas celle de la U1': 'The nozzle set in Orca isn’t the U1’s', 'change-la dans Imprimante, puis Buse.': 'change it in Printer, then Nozzle.', 'Voie vide': 'Empty lane', 'Chemin pas encore calibré': 'Path not calibrated yet', 'Cette bobine est dans T': 'This spool is in T', 'après la file.': 'after the queue.', 'a déjà le': 'already has the', 'de l’ACE': 'from ACE', 'est vide.': 'is empty.', 'Ce chemin n’est pas encore calibré. Calibre-le dans multiACE': 'This path isn’t calibrated yet. Calibrate it in multiACE', 'Config, puis Calibration.': 'Config, then Calibration.', 'Charger dans T': 'Load into T', 'Échanger dans T': 'Swap into T', 'Calibrer le débit': 'Calibrate flow', 'Mets une bobine dans cette voie pour l’utiliser.': 'Put a spool in this lane to use it.', 'Clique sur une bobine ou une tête pour agir. Clique deux fois sur un bouton pour confirmer. Les actions s’enchaînent dans une file d’attente.': 'Click a spool or a head to act. Click a button twice to confirm. Actions run one after another in a queue.', 'Couleur invalide (format #RRGGBB).': 'Invalid colour (format #RRGGBB).', 'Enregistrement…': 'Saving…', 'Envoi…': 'Sending…', 'Aucun ACE.': 'No ACE.', 'Fermer': 'Close', 'voie': 'lane', 'Voie': 'Lane', 'vers T': 'to T', 'restants': 'left', 'vide': 'empty', 'libre': 'free', 'Chargement de T%s : ACE %s, voie %s': 'Loading T%s: ACE %s, lane %s', 'Échange sur T%s : ACE %s, voie %s': 'Swap on T%s: ACE %s, lane %s', 'Plans calculés par le multiACE': 'Plans computed by the multiACE', 'de ta U1': 'of your U1', 'Plan d’impression': 'Print plan', 'La U1 a calculé': 'The U1 computed', 'façons de répartir les bobines.': 'ways to share out the spools.', 'Calculé avec tes bobines imposées.': 'Computed with your forced spools.', 'Calcul avec tes choix…': 'Computing with your choices…', 'Au fil de l’impression': 'Over the print', 'Durée': 'Time', 'Échanges': 'Swaps', 'Purge': 'Purge', 'Comme tranché': 'As sliced', 'Optimisé': 'Optimized', 'Par couche': 'Per layer', 'Chaque filament garde la tête choisie dans Orca.': 'Each filament keeps the head chosen in Orca.', 'La U1 choisit où poser chaque bobine pour limiter les échanges.': 'The U1 picks where each spool goes to cut swaps.', 'Jamais deux couleurs d’une couche sur la même tête.': 'Never two colours of one layer on the same head.', 'En déplaçant des bobines.': 'By moving spools.', 'Impossible ici': 'Not possible here', 'Une barre par tête, longue comme l’impression. Chaque changement de couleur dans une barre est un échange de bobine.': 'One bar per head, as long as the print. Each colour change in a bar is a spool swap.', 'Choisir les bobines moi-même': 'Choose the spools myself', 'Masquer mes bobines': 'Hide my spools', 'la U1 recalcule durée et échanges avec tes choix': 'the U1 recomputes time and swaps with your choices', 'Avant de lancer': 'Before printing', 'gestes': 'moves', 'geste': 'move', 'Dans cet ordre. Les numéros sont sur la carte.': 'In this order. The numbers are on the map.', 'pose une bobine': 'put a spool', 'Sors d’abord le': 'First take out the', 'C’est fait': 'Done', 'fait': 'done', 'Après l’avoir posée : la voie reçoit cette couleur et cette matière (une bobine RFID se relit seule)': 'Once it’s in: the lane gets this colour and material (an RFID spool is read again by itself)', 'Après l’avoir posée : sa couleur, sa matière et sa bobine de la table multiACE suivent dans la nouvelle voie (une bobine RFID se relit seule)': 'Once it’s in: its colour, material and multiACE table spool follow it to the new lane (an RFID spool is read again by itself)', 'Sans rien déplacer, la U1 imprimerait': 'Without moving anything, the U1 would print', 'le filament': 'filament', 'avec': 'with', 'Pour l’accepter, impose ces bobines avec « Choisir les bobines moi-même ».': 'To accept it, force these spools with “Choose the spools myself”.', 'Bobines pour le plan': 'Spools for the plan', 'Bobines utilisées': 'Spools used', 'à déplacer': 'to move', 'à poser': 'to put', 'à sortir des ACE': 'to take out of the ACEs', 'Avec tes bobines imposées.': 'With your forced spools.', 'Dans les ACE, comme maintenant.': 'In the ACEs, as they are now.', 'À sortir des ACE': 'Take out of the ACEs', 'Placer pas à pas': 'Place step by step', 'Un geste à la fois, avec un bouton « C’est fait » pour chacun.': 'One move at a time, with a “Done” button for each.', 'échanges de bobine sur cette tête': 'spool swaps on this head', 'Au départ': 'At start', 'ajoute MESH_MIN / MESH_MAX si ton profil palpe tout le plateau': 'adds MESH_MIN / MESH_MAX if your preset probes the whole bed', 'Débit (PA) au départ': 'Flow (PA) at start', ', arrive pendant l’impression (T': ', arrives during the print (T', '(aucune bobine associée à la voie)': '(no spool linked to the lane)', 'Trajet doux vers la purge': 'Soft travel to the purge', '100 mm/s, buse levée de 5 mm, après les calibrations': '100 mm/s, nozzle lifted 5 mm, after calibrations', 'Timelapse': 'Time-lapse', 'caméra de la U1': 'U1 camera', 'Chargement automatique : les têtes vides ou avec une autre bobine au départ sont chargées depuis les ACE avant la première couche, par le code multiACE de la U1.': 'Auto-load: heads that are empty or hold another spool at start are loaded from the ACEs before the first layer, by the U1’s multiACE code.', 'Place les bobines d’abord : le lancement attend que les bobines soient en place.': 'Place the spools first: printing waits until the spools are in place.', 'La U1 vérifie tout avant de démarrer.': 'The U1 checks everything before starting.', 'Mettre en file multiACE': 'Put in the multiACE queue', 'File d’impression de multiACE (Print Hub) : tu lances depuis multiACE quand tu veux': 'multiACE print queue (Print Hub): start it from multiACE whenever you like', 'Autres actions': 'More actions', 'Placer les bobines': 'Place the spools', 'pour': 'for', 'Un geste à la fois.': 'One move at a time.', 'Geste': 'Move', 'Sors-la de': 'Take it out of', 'Prends une bobine': 'Take a spool', 'Pose-la dans': 'Put it in', 'Même voie, autre ACE : elle alimentera toujours T': 'Same lane, other ACE: it still feeds T', 'Elle alimentera T': 'It will feed T', 'Cette couleur n’est dans aucun ACE.': 'This colour isn’t in any ACE.', 'Si elle est chargée dans une tête, décharge-la d’abord dans le panneau.': 'If it’s loaded in a head, unload it first in the panel.', 'pose-la ici': 'put it here', 'Geste en cours': 'Current move', 'Gestes suivants': 'Next moves', 'À sortir de l’ACE': 'Take out of the ACE', 'Chaque « C’est fait » met à jour les bobines dans la U1.': 'Each “Done” updates the spools in the U1.', 'Revenir au plan': 'Back to the plan', 'neuve': 'new', 'à sortir': 'to take out', 'Pose de côté la bobine de': 'Set aside the spool from', '(elle sera remise ensuite)': '(it goes back later)', ' couleurs différentes du projet': ' colours differ from the project', ' couleur différente du projet': ' colour differs from the project', ' couleurs différentes': ' colours differ', ' couleur différente': ' colour differs', 'Couleur différente du projet': 'Colour differs from the project', ') sera imprimé en ': ') will print in ', 'couleur inconnue': 'unknown colour', ', ton choix': ', your choice', 'Ces couleurs ne sont pas dans les ACE. ': 'These colours aren’t in the ACEs. ', 'Tu peux quand même lancer ou mettre en file.': 'You can still start or queue it.', 'Tu peux quand même lancer.': 'You can still start it.', ' Pour les bonnes couleurs, pose les bobines dans les ACE puis «\xa0Recharger\xa0» (menu ⋯).': ' For the right colours, put the spools in the ACEs, then “Reload” (⋯ menu).', '(remplace ': '(replaces ', ' Pour les bonnes couleurs, suis le plan Optimisé\xa0: il te dit où poser chaque bobine manquante, pas à pas.': ' For the right colours, follow the Optimized plan: it tells you where to put each missing spool, step by step.', 'Choisir le plan Optimisé': 'Choose the Optimized plan', 'À poser pour les bonnes couleurs': 'To place for the right colours', ' est vide.': ' is empty.', 'Charger T': 'Load T', ' depuis ACE ': ' from ACE ', '✓ Chargement de T': '✓ Loading T', 'Une tête vide au départ peut arrêter la U1 (erreur 523) avant que multiACE la charge\xa0: charge-la avant de lancer, puis «\xa0Recharger\xa0».': 'An empty head at start can stop the U1 (error 523) before multiACE loads it: load it before printing, then “Reload”.', 'Au départ, multiACE charge chaque tête depuis sa voie avant la première couche. Charge quand même les têtes vides avant de lancer\xa0: la U1 peut s’arrêter avant (erreur 523).': 'At start, multiACE loads each head from its lane before the first layer. Still load empty heads before printing: the U1 can stop before that (error 523).', ' sont vides\xa0: charge avant de lancer.': ' are empty: load before printing.', ' est vide\xa0: charge avant de lancer.': ' is empty: load before printing.', "Chargement de T%d (ACE %d, voie %d) ajouté à la file du panneau : attends qu'il soit fini, puis « Recharger ».": 'Loading T%d (ACE %d, lane %d) added to the panel queue: wait until it’s done, then “Reload”.', "la bobine #%s est dans ACE %d, voie %d, et cette voie n'est pas vide. Si tu l'as déplacée ici, détache-la d'abord là-bas (Modifier, Bobine : Aucune). Sinon, choisis-la de nouveau dans la liste : une bobine pareille sera créée.": "spool #%s is in ACE %d, lane %d, and that lane isn't empty. If you moved it here, detach it there first (Edit, Spool: None). Otherwise pick it again in the list: a matching spool will be created.", 'L’ACE ': 'ACE ', ' en ACE ': ' in ACE ', '\xa0: pose une bobine ': ': put a spool of ', ', débloque T': ', unlocks T', 'voie vide': 'empty lane', 'à la place de la bobine non identifiée': 'instead of the unidentified spool', ', qui remplace le ': ', which stands in for ', ', pas utilisé': ', not used', 'à la place du ': 'instead of ', '\xa0: plus de place, il restera en ': ': no room left, it stays ', ' a des bobines, mais la U1 ne le compte pas\xa0: vérifie dans multiACE qu’il est connecté.': ' has spools but the U1 doesn’t count it: check in multiACE that it’s connected.', 'Une bobine non identifiée (ni RFID lue, ni réglée à la main) est ignorée par la U1\xa0: si c’est une bonne couleur, identifie-la dans le panneau (clic sur la bobine, puis «\xa0Modifier\xa0»).': 'An unidentified spool (no RFID read, not set by hand) is ignored by the U1: if it’s a right colour, identify it in the panel (click the spool, then “Edit”).', 'la U1 recalcule avec les bobines posées': 'the U1 recalculates with the spools you placed', 'Pour les bonnes couleurs, pose les bobines dans les ACE puis «\xa0Recharger\xa0» (menu ⋯).': 'For the right colours, put the spools in the ACEs, then “Reload” (⋯ menu).', 'remplace ': 'replaces ', 'est chargée depuis cette voie : décharge-la d’abord.': 'is loaded from this lane: unload it first.', 'Déchargement de T': 'Unloading T', 'demandé (file du panneau).': 'requested (panel queue).', "Déchargement de T%d ajouté à la file du panneau : attends qu'il soit fini, puis sors la bobine.": 'Unloading T%d added to the panel queue: wait until it’s done, then take the spool out.', 'la U1 est en mode tête (un ACE par tête)': 'the U1 is in head mode (one ACE per head)', 'multiACE est en mode multi avec': 'multiACE is in multi mode with', 'copies de couleur activées': 'colour copies on', 'tête alimentée à la main': 'hand-fed head', 'changements en arrière-plan (ace2k)': 'background swaps (ace2k)', 'une répartition par tête': 'a per-head assignment', 'le Preflight de la U1 répartit par tête': 'the U1 Preflight assigns per head', '%s : rapport de la U1 illisible pour le plugin': '%s: U1 report unreadable for the plugin', "%s : cette version de multiACE ne permet pas de l'imprimer depuis Orca": "%s: this multiACE version can't print it from Orca", "cette version de multiACE ne permet pas d'imprimer ce mode depuis Orca": "this multiACE version can't print this mode from Orca", "la bobine choisie n'est pas en %s": "the chosen spool isn't %s", "la bobine choisie est sur une tête d'une autre taille de buse": 'the chosen spool is on a head with another nozzle size', 'filament %s : aucune bobine de cette matière': 'filament %s: no spool of this material', "le plan « %s » n'est pas possible": "the “%s” plan isn't possible", 'Comme chargé (loadout)': 'As loaded (loadout)', 'Moins de mélange (color)': 'Less mixing (color)', ' Chargement automatique au départ : %s (têtes des ACE chargées avant la 1re couche).': ' Auto-load at start: %s (ACE heads loaded before the 1st layer).', 'Comme chargé': 'As loaded', 'Moins de mélange': 'Less mixing', 'Chaque couleur sur une bobine déjà en place.': 'Each colour on a spool already in place.', 'La U1 propose où poser chaque bobine pour gagner du temps.': 'The U1 proposes where to put each spool to save time.', 'La U1 limite le mélange de couleurs dans une même buse.': 'The U1 limits colour mixing in the same nozzle.', ' En posant les bobines comme indiqué.': ' By placing the spools as shown.', 'En arrière-plan\xa0: %d sur %d': 'In the background: %d of %d', '(~%d min gagnées)': '(~%d min saved)', '%d trop courts': '%d too short', '%d trop court': '%d too short', '%d sur une tête non autorisée': '%d on a head not allowed', '%d sans temps (M73)': '%d without times (M73)', 'Mélange dans une même buse\xa0: %d g': 'Mixing in the same nozzle: %d g', 'Changements en arrière-plan\xa0: une tête garée change de bobine pendant qu’une autre imprime. La purge se fait au dock\xa0: garde les wipers propres.': 'Background swaps: a parked head changes spool while another one prints. The purge happens at the dock: keep the wipers clean.', 'pour le plan Comme chargé\xa0: la U1 recalcule durée et échanges': 'for the As loaded plan: the U1 recomputes time and swaps', 'Plan Comme chargé calculé avec tes bobines imposées.': 'As loaded plan computed with your forced spools.', 'Tes choix\xa0: %s.': 'Your choices: %s.', 'aucune bobine de sa matière pour le filament %s': 'no spool of its material for filament %s', 'aucune bobine de cette matière': 'no spool of this material', 'charge-la': 'load it', ' Sur la U1 (chargeur latéral, puis l’écran), puis «\xa0Recharger\xa0».': ' On the U1 (side feeder, then the screen), then “Reload”.', ' À la main sur la U1, puis «\xa0Recharger\xa0».': ' By hand on the U1, then “Reload”.', ' À la place du %s.': ' Instead of the %s.', 'chargeur latéral de T%d': 'side feeder of T%d', 'T%d, à la main': 'T%d, by hand', 'Charge-la dans': 'Load it into', 'Le chargeur latéral se charge sur la U1\xa0: règle ensuite ce filament sur son écran.': 'The side feeder is loaded on the U1: then set this filament on its screen.', 'Charge la tête à la main sur la U1 et règle ce filament sur son écran.': 'Load the head by hand on the U1 and set this filament on its screen.', ' Il remplace le %s.': ' It replaces the %s.', ' Ensuite, «\xa0Recharger\xa0»\xa0: la U1 relit ses bobines.': ' Then “Reload”: the U1 reads its spools again.', 'charge-la ici': 'load it here', 'à changer': 'to change', 'à charger': 'to load', 'Chargeur latéral': 'Side feeder', 'non connecté': 'not connected', 'aucune alimentation': 'no feed', '(copie)': '(copy)', 'Filament %d : aucune bobine de sa matière (ACE ou chargeur latéral).': 'Filament %d: no spool of its material (ACE or side feeder).', 'T%d : l’ACE %d n’est pas connecté.': 'T%d: ACE %d isn’t connected.', 'Dans les ACE et les chargeurs, comme maintenant.': 'In the ACEs and the feeders, as now.', ' à charger dans un chargeur latéral': ' to load into a side feeder', ' à charger à la main': ' to load by hand', 'Charge son chargeur latéral sur la U1, puis «\xa0Recharger\xa0».': 'Load its side feeder on the U1, then “Reload”.', 'Charge-la à la main, puis «\xa0Recharger\xa0».': 'Load it by hand, then “Reload”.', 'multiACE ne charge que les têtes des ACE\xa0: une tête sans ACE doit être chargée avant de lancer.': 'multiACE only loads the ACE heads: a head without an ACE must be loaded before printing.', 'Au départ, multiACE charge les têtes des ACE avant la première couche.': 'At start, multiACE loads the ACE heads before the first layer.', ' Une tête sans ACE (chargeur latéral) doit déjà être chargée.': ' A head without an ACE (side feeder) must already be loaded.', ' Une tête sans ACE (à la main) doit déjà être chargée.': ' A head without an ACE (by hand) must already be loaded.', 'Ces couleurs ne sont pas dans les ACE ni les chargeurs. ': 'These colours aren’t in the ACEs or the feeders. ', 'Filament %d, il est dans le %s.': 'Filament %d, it’s in the %s.', 'Elle est dans le %s.': 'It’s in the %s.', 'Elle est sur %s.': 'It’s on %s.', 'Filament %d, il est sur %s.': 'Filament %d, it’s on %s.', 'Une bobine pareille sera créée pour cette voie.': 'A matching spool will be created for this lane.', 'Copie de ': 'Copy of ', 'Nouvelle bobine pareille au #%s pour cette voie : le #%s ne bouge pas. Son PA mémorisé est repris.': 'New spool matching #%s for this lane: #%s stays where it is. Its stored PA is copied.', 'bobine #%s introuvable dans la table multiACE': 'spool #%s not found in the multiACE table', "Nouvelle bobine pareille au #%s dans l'ACE %d, voie %d": 'New spool matching #%s in ACE %d, lane %d', 'Un geste à la fois, avec un bouton «\xa0C’est fait\xa0» pour chacun.': 'One move at a time, with a “Done” button for each.', 'Place les bobines d’abord\xa0: le lancement attend que les bobines soient en place.': 'Place the spools first: printing waits until the spools are in place.', 'Chaque «\xa0C’est fait\xa0» met à jour les bobines dans la U1.': 'Each “Done” updates the spools in the U1.', 'Durée choisie : %s. L’ACE sèche par cycles de 10 h au plus : le plugin relance le suivant tant qu’OrcaSlicer est ouvert.': 'Chosen time: %s. The ACE dries in cycles of 10 h at most: the plugin starts the next one while OrcaSlicer is open.', 'Plus de 10 h : l’ACE sèche par cycles de 10 h, relancés par le plugin. Garde OrcaSlicer ouvert.': 'Over 10 h: the ACE dries in 10 h cycles, restarted by the plugin. Keep OrcaSlicer open.', 'En\xa0pause': 'Paused', 'démarrage…': 'starting…', 'Relancer': 'Restart', 'ACE %d : nouveau cycle de séchage lancé (%d °C, encore %s).': 'ACE %d: next drying cycle started (%d °C, %s to go).', 'ACE %d : séchage relancé (%d °C, encore %s).': 'ACE %d: drying restarted (%d °C, %s to go).', 'ACE %d : le séchage ne démarre pas (encore %s prévus).': 'ACE %d: drying doesn’t start (%s still planned).', "ACE %d : le séchage s'est arrêté avant la fin du cycle (encore %s prévus). Arrêté depuis la U1 ? Il n'est pas relancé tout seul.": 'ACE %d: drying stopped before the end of the cycle (%s still planned). Stopped from the U1? It won’t restart by itself.', 'ACE %d : séchage terminé (%s).': 'ACE %d: drying finished (%s).', "ACE %d : séchage long annulé (retiré de la file d'attente).": 'ACE %d: long drying cancelled (removed from the queue).', ' par cycles de 10 h': ' in 10 h cycles', 'tes bobines': 'your spools', 'projet': 'project', 'Aperçu aux couleurs des bobines choisies (approximatif). Clic : couleurs du projet.': 'Preview in the colours of the chosen spools (approximate). Click: project colours.', 'Couleurs du projet. Clic : couleurs des bobines choisies.': 'Project colours. Click: colours of the chosen spools.', 'Pas assez de filament : %s a encore %d g, il en faut environ %d g (filament %s).': 'Not enough filament: %s has %d g left, about %d g needed (filament %s).', 'Filament juste : %s a encore %d g, il en faut environ %d g (filament %s), sans compter la purge.': 'Filament is tight: %s has %d g left, about %d g needed (filament %s), not counting purge.', 'Réglages de l’imprimante': 'Printer settings', 'Enregistrés sur la U1 dès que tu cliques, comme sur son écran.': 'Saved on the U1 as soon as you click, like on its screen.', 'pause quand une voie ne fait plus avancer le filament, avant d’imprimer dans le vide (multiACE)': 'pauses when a lane stops feeding filament, before printing in the air (multiACE)', 'bobine finie : recharge depuis une voie de même matière et couleur, puis reprend (multiACE)': 'spool runs out: reloads from a lane with the same material and colour, then resumes (multiACE)', 'Auto-refill de la U1': 'U1 auto-refill', 'bobine finie : une autre tête chargée du même filament prend le relais': 'spool runs out: another head loaded with the same filament takes over', 'Détection des spaghettis': 'Spaghetti detection', 'Objets sur le plateau': 'Objects on the bed', 'caméra de la U1, avant d’imprimer': 'U1 camera, before printing', 'Éteindre la lumière à la fin': 'Turn the light off when done', 'lumière de la U1': 'U1 light', 'Réglage non enregistré : %s': 'Setting not saved: %s', 'Sensibilité': 'Sensitivity', 'basse': 'low', 'haute': 'high', 'Séchage auto': 'Auto-dry', 'démarre au-dessus de': 'starts above', 's’arrête sous': 'stops below', 'suit l’humidité de': 'follows', 'aucun ACE 2 Pro': 'no ACE 2 Pro', 'chauffe à': 'heats to', 'prolongé de': 'runs on for', 'Séchage auto désactivé': 'Auto-dry off', 'Séchage auto : démarre au-dessus de %d\xa0%, s’arrête sous %d\xa0% (%d\xa0°C)': 'Auto-dry: starts above %d\xa0%, stops below %d\xa0% (%d\xa0°C)', 'Séchage auto : suit l’humidité de %s (%d\xa0°C, prolongé de %s)': 'Auto-dry: follows %s (%d\xa0°C, runs on for %s)', 'Séchage auto : aucun ACE 2 Pro à suivre': 'Auto-dry: no ACE 2 Pro to follow', 'L’ACE 2 Pro mesure son humidité : il sèche tout seul au-dessus du premier seuil et s’arrête sous le second. Ça se passe sur la U1, même OrcaSlicer fermé, mais pas pendant une impression (réglage de multiACE).': 'The ACE 2 Pro measures its humidity: it dries by itself above the first threshold and stops below the second. It runs on the U1, even with OrcaSlicer closed, but not during a print (multiACE setting).', 'Choisis d’abord l’ACE 2 Pro à suivre.': 'Pick the ACE 2 Pro to follow first.', 'L’ACE Pro n’a pas de capteur d’humidité : il sèche en même temps que l’ACE\xa02\xa0Pro choisi, puis continue le temps indiqué, parce qu’il est moins étanche.': 'The ACE Pro has no humidity sensor: it dries at the same time as the chosen ACE\xa02\xa0Pro, then keeps going for the set time, because it is less airtight.', 'Séchage auto ACE %s activé': 'Auto-dry ACE %s on', 'Séchage auto ACE %s désactivé': 'Auto-dry ACE %s off', 'Réglage du séchage auto ACE %s': 'Auto-dry setting ACE %s', 'À la fin': 'At the end', 'aucune tête': 'none', 'toutes (%s)': 'all (%s)', 'après la fin de l’impression, multiACE renvoie le filament dans l’ACE, comme le bouton «\xa0Décharger\xa0» du panneau ACE ; seulement les têtes alimentées par un ACE': 'after the print ends, multiACE sends the filament back to the ACE, like the “Unload” button in the ACE panel; only the heads fed by an ACE', 'À la fin, multiACE décharge': 'At the end, multiACE unloads', "Déchargement à la fin non ajouté : pas de PRINT_END dans le fichier, ou ces têtes n'impriment pas.": 'Unload at the end not added: no PRINT_END in the file, or these heads don’t print.'})   # refonte 0.41
 
 _I18N_EN.update({   # 0.37.0
     "Mettre dans la file multiACE": "Put in the multiACE queue",
@@ -1970,6 +1970,81 @@ def prepend_print_prefs_127(in_path, out_path, bed_mesh=False, camera=False, flo
                 out.writelines(block)
 
 
+# --------------------------------------------------------------------------- déchargement à la fin (0.46)
+#
+# Le réglage « Décharger à la fin » de la U1 (END_UNLOAD_FILAMENT) ne vaut que pour les têtes qu'elle croit utilisées,
+# et elle ne l'apprend que de son écran de lancement (SDCARD_PRINT_FILE_WITH_PARAMETERS). Une impression lancée par
+# multiACE passe par Moonraker : aucune tête « utilisée », rien n'est déchargé. Le plugin ajoute donc lui-même, juste
+# après le PRINT_END du fichier, le déchargement de multiACE : ACE_UNLOAD_HEAD HEAD=<n>, permis depuis le fichier
+# d'impression ; multiACE fait le homing XY et la chauffe, et ne fait rien sur une tête déjà vide.
+
+_PRINT_END_LINE = re.compile(r"^[ \t]*PRINT_END(?:[ \t;]|\r?$)", re.I)
+_T_HEAD_LINE = re.compile(r"^[ \t]*T([0-3])[ \t]*(?:;.*)?\r?$", re.I)
+_ACE_HEAD_LINE = re.compile(r"^[ \t]*ACE_(?:SWAP|LOAD)_HEAD[ \t][^;\r\n]*?\bHEAD=([0-3])\b", re.I)
+_UNLOAD_MARK = re.compile(r"^; multiACE Bridge: unload at print end \((T[1-4](?:, T[1-4])*)\)\r?$", re.M)
+
+
+def end_unload_choice(choice):
+    """Choix gardé pour la fois suivante : « all », une tête 0..3, sinon None (aucune tête ou choix illisible)."""
+    if choice == "all":
+        return "all"
+    if isinstance(choice, int) and not isinstance(choice, bool) and 0 <= choice <= 3:
+        return choice
+    return None
+
+
+def end_unload_heads(heads):
+    """Têtes à décharger envoyées par la fenêtre : 1 à 4 têtes 0..3 distinctes, triées ; None sinon."""
+    if not isinstance(heads, list) or not 1 <= len(heads) <= 4:
+        return None
+    if any(not isinstance(h, int) or isinstance(h, bool) or not 0 <= h <= 3 for h in heads):
+        return None
+    if len(set(heads)) != len(heads):
+        return None
+    return sorted(heads)
+
+
+def end_unload(in_path, out_path, heads):
+    """Écrit dans out_path une copie de in_path avec, juste après la ligne PRINT_END, ACE_UNLOAD_HEAD pour chaque tête
+    de heads que le fichier utilise (ligne T<n>, ou chargement / échange multiACE de la tête). Rend les têtes
+    ajoutées ; [] et rien d'écrit s'il n'y a pas de PRINT_END ou aucune de ces têtes."""
+    used, end = set(), None
+    with open(in_path, "r", encoding="utf-8", errors="replace") as src:
+        for i, raw in enumerate(src):
+            if raw[:1] in ("G", "M", ";", "\n"):           # mouvements, réglages, commentaires : sans intérêt ici
+                continue
+            m = _T_HEAD_LINE.match(raw) or _ACE_HEAD_LINE.match(raw)
+            if m:
+                used.add(int(m.group(1)))
+            elif _PRINT_END_LINE.match(raw):
+                end = i
+    todo = [h for h in heads if h in used] if end is not None else []
+    if not todo:
+        return []
+    with open(in_path, "r", encoding="utf-8", errors="replace") as src, \
+            open(out_path, "w", encoding="utf-8", newline="\n") as out:
+        for i, raw in enumerate(src):
+            out.write(raw)
+            if i == end:
+                if not raw.endswith("\n"):
+                    out.write("\n")
+                out.write("; multiACE Bridge: unload at print end (%s)\n" % ", ".join("T%d" % (h + 1) for h in todo))
+                out.writelines("ACE_UNLOAD_HEAD HEAD=%d\n" % h for h in todo)
+    return todo
+
+
+def end_unload_note(path, prefs):
+    """Fin du message d'envoi : têtes que multiACE déchargera à la fin, ou pourquoi rien n'a été ajouté ("" si rien
+    n'était demandé)."""
+    if not end_unload_heads((prefs or {}).get("unload_heads")):
+        return ""
+    _head, tail = read_head_tail(path, head_bytes=0, tail_bytes=1 << 21)
+    m = _UNLOAD_MARK.search(tail)
+    if m:
+        return " À la fin, multiACE décharge %s." % m.group(1)
+    return " ⚠ Déchargement à la fin non ajouté : pas de PRINT_END dans le fichier, ou ces têtes n'impriment pas."
+
+
 def autoload_heads(path):
     """Tetes chargees au depart par le bloc « multiACE auto-load » du fichier prepare (None : pas de bloc)."""
     head, _tail = read_head_tail(path, head_bytes=1 << 20, tail_bytes=0)
@@ -2089,6 +2164,11 @@ def u1_prepare(client, path, name, plan_name, prefs, expected, report=None, forc
         other = nxt(final)
         soft_start(final, other)
         final = other
+    unload = end_unload_heads(prefs.get("unload_heads"))
+    if unload:
+        other = nxt(final)
+        if end_unload(final, other, unload):
+            final = other
     # Verifications du fichier produit avant tout envoi.
     if not os.path.exists(final) or os.path.getsize(final) < 1024:
         raise MultiAceError("fichier préparé vide")
@@ -2494,8 +2574,15 @@ h2{font-family:var(--hubot);font-weight:720;font-stretch:92%;font-size:15.5px;ma
 .fd.dk{box-shadow:inset 0 0 0 1px #6A6E76}
 /* en-tête */
 .hd{display:flex;align-items:center;gap:16px;padding:16px 22px;border-bottom:1px solid var(--rule)}
-.th{width:66px;height:66px;border-radius:8px;overflow:hidden;background:#2A2B2F;flex:none;border:1px solid #33363B}
+.th{width:120px;height:120px;border-radius:8px;overflow:hidden;background:#2A2B2F;flex:none;border:1px solid #33363B;position:relative}
 .th img{width:100%;height:100%;object-fit:contain}
+.th.alt{cursor:pointer}.th.alt:hover{border-color:#55585F}
+.th .tl{position:absolute;left:0;right:0;bottom:0;padding:2px 0 3px;font-size:10px;line-height:1.2;text-align:center;color:#C9CCD2;background:rgba(23,24,27,.78)}
+.pset .og{grid-template-columns:1fr 1fr}.pset .pw{font-style:normal;color:var(--fog)}.pset .okc{font-style:normal}
+.sens{display:flex;align-items:center;margin:6px 0 0 23px;font-size:11.5px;color:var(--fog)}.sens span{margin-right:8px}
+.sens .sg{height:22px;padding:0 9px;font-size:11.5px;font-weight:520;border-radius:0;color:var(--fog)}
+.sens .sg:first-of-type{border-radius:5px 0 0 5px}.sens .sg:last-of-type{border-radius:0 5px 5px 0;border-left:0}
+.sens .sg.on{background:#3A3E46;color:var(--chalk)}.sens .sg.on:disabled,.sens .sg:disabled{opacity:.6}.sens em{margin-left:8px}
 .tt{min-width:0}
 .tt h1{font-family:var(--hubot);font-weight:720;font-stretch:90%;font-size:21px;line-height:1.15;margin:0;word-break:break-all}
 .tt p{font-size:12px;color:var(--fog);margin:4px 0 0}.tt p b{color:var(--chalk);font-weight:560}
@@ -2631,6 +2718,11 @@ h2{font-family:var(--hubot);font-weight:720;font-stretch:92%;font-size:15.5px;ma
 .cb input:disabled + .bx{opacity:.4}
 .cb input:focus-visible + .bx{outline:2px solid var(--teal);outline-offset:2px}
 .cb small{display:block;font-size:11.5px;color:var(--fog);margin-top:1px}
+.endu{display:flex;flex-direction:column;gap:3px;font-size:12.5px}
+.endu label{display:flex;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer}
+.endu select{background:#2A2C31;color:var(--chalk);border:1px solid var(--rule);border-radius:5px;height:26px;padding:0 4px;font:inherit;font-size:12px}
+.endu select:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.endu small{font-size:11.5px;color:var(--fog)}
 .sub{margin:8px 0 0 23px;font-size:12px;display:flex;flex-direction:column;gap:5px}
 .sub .row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .sub .row.fog{display:block;line-height:1.75}.sub .row.fog button{margin-left:6px}
@@ -2706,7 +2798,7 @@ h2{font-family:var(--hubot);font-weight:720;font-stretch:92%;font-size:15.5px;ma
 <script>
 var D=__DATA__;
 (function(){
-var S={sel:null,forced:{},flow:null,busy:false,msg:null,open:null,done:{},mode:"plan",more:false,forceOpen:false,unl:{},ld:{}};
+var S={sel:null,forced:{},flow:null,busy:false,msg:null,open:null,done:{},mode:"plan",more:false,forceOpen:false,unl:{},ld:{},pw:{},pv:{},pe:null,thOrig:false,endU:null};
 var SVGNS="http://www.w3.org/2000/svg";
 function esc(x){var d=document.createElement("span");d.textContent=x==null?"":String(x);return d.innerHTML}
 function col(c){var m=/^#?([0-9a-fA-F]{6})/.exec(String(c||"").trim());return m?"#"+m[1]:"#777777"}
@@ -2940,6 +3032,23 @@ function nozWarn(row){var sl=(I().sliced||[])[row.t]||{},h=headOf(row),real=real
 function startHeads(rows){var byT={},seen={},out=[];rows.forEach(function(r){if(!r.copy)byT[r.t]=r});
   var order=(I().order||[]).slice();rows.forEach(function(r){if(order.indexOf(r.t)<0)order.push(r.t)});
   order.forEach(function(t){var r=byT[t];if(!r||(!r.slot&&!r.pin))return;var h=headOf(r);if(seen[h])return;seen[h]=1;out.push(r)});return out}
+// 0.46.1 : têtes que multiACE décharge à la fin (ACE_UNLOAD_HEAD, comme le bouton « Décharger » du panneau ACE) :
+// celles du plan affiché alimentées par un ACE. Une tête au chargeur latéral ou à la main n'est pas proposée
+// (son filament se retire à la main).
+function usedHeads(rows){var o=[],pin={};rows.forEach(function(r){if(r.pin)pin[headOf(r)]=1});
+  rows.forEach(function(r){if(!r.slot||r.pin)return;var h=headOf(r);if(typeof h==="number"&&h>=0&&h<=3&&!pin[h]&&o.indexOf(h)<0)o.push(h)});
+  return o.sort(function(a,b){return a-b})}
+function endU(){var e=document.getElementById("endu");if(!e||!e.value)return null;return e.value==="all"?"all":+e.value}
+// têtes à décharger, telles que proposées dans la liste : « toutes » = chacune des têtes proposées
+function endHeads(){var e=document.getElementById("endu");if(!e||!e.value)return null;if(e.value!=="all")return [+e.value];
+  return Array.prototype.map.call(e.options,function(o){return o.value}).filter(function(v){return v!==""&&v!=="all"}).map(Number)}
+function endHTML(rows){var P=D.prefs||{},uh=usedHeads(rows);if(!uh.length)return "";
+  var uv=S.endU!=null?S.endU:(P.unload!=null?P.unload:"");
+  if(uv==="all"&&uh.length<2)uv=uh[0];if(uv!=="all"&&uh.indexOf(uv)<0)uv="";
+  return '<div class="start fin"><h2>À la fin</h2><div class="endu"><label>Décharger <select id="endu"><option value="">aucune tête</option>'+
+    (uh.length>1?'<option value="all"'+(uv==="all"?" selected":"")+'>toutes ('+uh.map(function(x){return "T"+(x+1)}).join(", ")+')</option>':'')+
+    uh.map(function(x){return '<option value="'+x+'"'+(uv===x?" selected":"")+'>T'+(x+1)+'</option>'}).join("")+'</select></label>'+
+    '<small>après la fin de l’impression, multiACE renvoie le filament dans l’ACE, comme le bouton «&nbsp;Décharger&nbsp;» du panneau ACE ; seulement les têtes alimentées par un ACE</small></div></div>'}
 function paOf(row){if(!row.slot)return {spool:null,pa:null};var x=L().slots[row.slot.ace+"_"+row.slot.slot];var k=L().dia+"_"+vt(realOf(headOf(row)));
   return {spool:x?x.spool:null,pa:x&&x.pa&&x.pa[k]!=null?x.pa[k]:null}}
 function cn(c){return (c&&c.name)||cname(c&&(c.hex||c.color))}
@@ -3057,11 +3166,153 @@ function planMap(rows,LAY,q){var H=heads4(q),byHead={},n=(D.report||{}).num_aces
   return M}
 
 // ---- rendu
+// ---- 0.45.0 : aperçu aux couleurs des bobines. La vignette du G-code est repeinte : chaque pixel va à la couleur du
+// projet qui l'explique le mieux (ombre comprise), puis il est multiplié par (α·bobine + 1−α) / (α·projet + 1−α). Les
+// vignettes d'OrcaSlicer mélangent la couleur de blanc avant de l'ombrer : α est mesuré sur l'image. Noir, gris et blanc
+// sont départagés par zones d'ombre continue. Approximation, pas un rendu 3D. Même calcul que test/apercu_ref.py.
+var RPL=(function(){var t=new Float64Array(256);for(var i=0;i<256;i++){var c=i/255;t[i]=c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4)}return t})(),
+    RP={src:null,cache:{},busy:null};
+function rpLin(h){var c=rgb(h);return [RPL[c[0]],RPL[c[1]],RPL[c[2]]]}
+function rpByte(v){v=v<0?0:v>1?1:v;v=v<=0.0031308?v*12.92:1.055*Math.pow(v,1/2.4)-0.055;return Math.floor(v*255+0.5)}
+function rpPtp(c){return Math.max(c[0],c[1],c[2])-Math.min(c[0],c[1],c[2])}
+function rpMix(B,a){return B.map(function(c){return [a*c[0]+1-a,a*c[1]+1-a,a*c[2]+1-a]})}
+// 0.46.1 : aperçu plus vif. Noir, gris, blanc et couleurs très sombres : clarté mesurée sur l'image (le modèle les voit
+// trop clairs) ; bobines rendues avec moins de blanc. Constantes mesurées sur une vraie vignette d'OrcaSlicer.
+var RPK={S:0.47,K0:0.19,K1:0.73,AV:0.85};
+function rpY(c){return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2]}
+function rpApp(B,T,X,n,idx,E,a){var K=B.length,M=rpMix(B,a),av=Math.max(a,RPK.AV),V=rpMix(T,av),G=[],cnt=[],med=[],k,i;
+  for(k=0;k<K;k++)G.push([[],[],[]]);
+  for(i=0;i<n;i++){var g=G[E[idx[i]]];if(!g)continue;g[0].push(X[3*i]);g[1].push(X[3*i+1]);g[2].push(X[3*i+2])}
+  for(k=0;k<K;k++){cnt[k]=G[k][0].length;med[k]=cnt[k]>=20?[rpMed(G[k][0]),rpMed(G[k][1]),rpMed(G[k][2])]:null}
+  var num=0,den=0;
+  for(k=0;k<K;k++)if(med[k]&&rpPtp(B[k])>=0.1){var m=M[k],c=med[k];num+=cnt[k]*(c[0]*m[0]+c[1]*m[1]+c[2]*m[2])/(m[0]*m[0]+m[1]*m[1]+m[2]*m[2]);den+=cnt[k]}
+  var sb=den?num/den:RPK.S,lum={},AS=M.map(function(x){return x.slice()}),AT=V.map(function(x){return x.slice()}),cl=function(v){return v<0.01?0.01:v>1.5?1.5:v},
+      fit=function(c,a2,v){var w=rpMix([c],Math.min(a2,0.95))[0],y=Math.max(rpY(w),1e-4);return [w[0]*v/y,w[1]*v/y,w[2]*v/y]};
+  for(k=0;k<K;k++)if(rpPtp(B[k])<0.1){var v=cl(med[k]?rpY(med[k])/sb:RPK.K0+RPK.K1*rpY(B[k]));lum[k]=v;AS[k]=fit(B[k],a,v)}
+  for(k=0;k<K;k++)if(rpPtp(T[k])<0.1){var vt=null;
+    for(var j=0;j<K;j++)if(lum[j]!==undefined&&B[j][0]===T[k][0]&&B[j][1]===T[k][1]&&B[j][2]===T[k][2]){vt=lum[j];break}
+    AT[k]=fit(T[k],av,vt===null?cl(RPK.K0+RPK.K1*rpY(T[k])):vt)}
+  return [AS,AT]}
+function rpMed(v){var s=Float64Array.from(v).sort(),n=s.length;return n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2}
+function rpPct(s,q){var p=(s.length-1)*q,lo=Math.floor(p),hi=Math.min(lo+1,s.length-1);return s[lo]+(s[hi]-s[lo])*(p-lo)}
+function rpClass(X,n,M,lab){var K=M.length,den=M.map(function(m){return m[0]*m[0]+m[1]*m[1]+m[2]*m[2]});
+  for(var p=0;p<n;p++){var x0=X[3*p],x1=X[3*p+1],x2=X[3*p+2],best=Infinity,bi=0;
+    for(var i=0;i<K;i++){var m=M[i],s=(x0*m[0]+x1*m[1]+x2*m[2])/den[i];s=s<0.02?0.02:s>1.6?1.6:s;
+      var d0=x0-s*m[0],d1=x1-s*m[1],d2=x2-s*m[2],l=Math.log(s/0.55),c=(d0*d0+d1*d1+d2*d2)/(s*s*den[i]+1e-4)+0.035*l*l;
+      if(c<best){best=c;bi=i}}
+    lab[p]=bi}}
+function rpMaj(E,w,h,K){var V=new Int32Array(K),out=new Int16Array(E.length);
+  for(var y=0;y<h;y++)for(var x=0;x<w;x++){var i=y*w+x;if(E[i]<0){out[i]=-1;continue}V.fill(0);
+    for(var yy=Math.max(0,y-1);yy<=Math.min(h-1,y+1);yy++)for(var xx=Math.max(0,x-1);xx<=Math.min(w-1,x+1);xx++){var e=E[yy*w+xx];if(e>=0)V[e]++}
+    var b=0;for(var k=1;k<K;k++)if(V[k]>V[b])b=k;out[i]=b}
+  return out}
+function rpGrey(E,px,w,h,B,a){var K=B.length,gris=[],i;for(i=0;i<K;i++)if(rpPtp(B[i])<0.1)gris.push(i);if(gris.length<2)return E;
+  var N=w*h,Y=new Float64Array(N),p,M=rpMix(B,a),att=[],isg=new Uint8Array(K),seen=new Uint8Array(N),out=E.slice();
+  for(p=0;p<N;p++)Y[p]=0.2126*RPL[px[4*p]]+0.7152*RPL[px[4*p+1]]+0.0722*RPL[px[4*p+2]];
+  gris.forEach(function(j){isg[j]=1;att[j]=0.9*(0.2126*M[j][0]+0.7152*M[j][1]+0.0722*M[j][2])});
+  for(var s0=0;s0<N;s0++){if(seen[s0]||E[s0]<0||!isg[E[s0]])continue;var st=[s0],zone=[];seen[s0]=1;
+    while(st.length){p=st.pop();zone.push(p);var x=p%w,y=(p-x)/w,nb=[];if(y>0)nb.push(p-w);if(y<h-1)nb.push(p+w);if(x>0)nb.push(p-1);if(x<w-1)nb.push(p+1);
+      for(var q=0;q<nb.length;q++){var o=nb[q];if(seen[o]||E[o]<0||!isg[E[o]])continue;
+        if(Math.max(Y[p],Y[o])/Math.max(Math.min(Y[p],Y[o]),1e-4)<1.35){seen[o]=1;st.push(o)}}}
+    if(zone.length<4)continue;
+    var v=Float64Array.from(zone.map(function(z){return Y[z]})).sort(),y90=rpPct(v,0.9),bj=gris[0],bd=Infinity;
+    gris.forEach(function(j){var d=Math.abs(Math.log(Math.max(y90,1e-4)/att[j]));if(d<bd){bd=d;bj=j}});
+    zone.forEach(function(z){out[z]=bj})}
+  return out}
+function repaint(px,w,h,base,target){var K=base.length,N=w*h,p,i;if(!K)return false;
+  var B=base.map(rpLin),T=target.map(rpLin),opaque=true;
+  for(p=0;p<N;p++)if(px[4*p+3]<250){opaque=false;break}
+  var bg=null;if(opaque){var br=[[],[],[]];for(p=0;p<N;p++){var x=p%w,y=(p-x)/w;if(x===0||y===0||x===w-1||y===h-1)for(i=0;i<3;i++)br[i].push(px[4*p+i])}bg=br.map(rpMed)}
+  var idx=[];for(p=0;p<N;p++){if(px[4*p+3]<6)continue;
+    if(bg&&Math.max(Math.abs(px[4*p]-bg[0]),Math.abs(px[4*p+1]-bg[1]),Math.abs(px[4*p+2]-bg[2]))<=18)continue;idx.push(p)}
+  var n=idx.length;if(!n)return false;
+  var X=new Float64Array(3*n),lab=new Int16Array(n);for(i=0;i<n;i++){p=idx[i];X[3*i]=RPL[px[4*p]];X[3*i+1]=RPL[px[4*p+1]];X[3*i+2]=RPL[px[4*p+2]]}
+  var classer=function(a){rpClass(X,n,rpMix(B,a),lab);var E=new Int16Array(N).fill(-1);for(var j=0;j<n;j++)E[idx[j]]=lab[j];return rpMaj(rpMaj(E,w,h,K),w,h,K)};
+  var a0=0.25+0.05*7,E=classer(a0),G=[],C=[],cnt=[];for(i=0;i<K;i++)G.push([[],[],[]]);
+  for(i=0;i<n;i++){var g=G[E[idx[i]]];g[0].push(X[3*i]);g[1].push(X[3*i+1]);g[2].push(X[3*i+2])}
+  for(i=0;i<K;i++){cnt[i]=G[i][0].length;C[i]=cnt[i]>=20?[rpMed(G[i][0]),rpMed(G[i][1]),rpMed(G[i][2])]:null}
+  var best=null,ba=a0;
+  for(var gi=0;gi<16;gi++){var a=0.25+0.05*gi,M=rpMix(B,a),err=0,nn=0;
+    for(i=0;i<K;i++){if(!C[i]||rpPtp(B[i])<0.1)continue;var m=M[i],c=C[i],mm=m[0]*m[0]+m[1]*m[1]+m[2]*m[2],s=(c[0]*m[0]+c[1]*m[1]+c[2]*m[2])/mm,
+      d0=c[0]-s*m[0],d1=c[1]-s*m[1],d2=c[2]-s*m[2];err+=cnt[i]*(d0*d0+d1*d1+d2*d2)/(s*s*mm+1e-6);nn+=cnt[i]}
+    if(nn&&(best===null||err/nn<best)){best=err/nn;ba=a}}
+  if(ba!==a0)E=classer(ba);
+  E=rpGrey(E,px,w,h,B,ba);
+  var AP=rpApp(B,T,X,n,idx,E,ba),MB=AP[0],MT=AP[1];
+  for(i=0;i<n;i++){p=idx[i];var k=E[p];for(var ch=0;ch<3;ch++)px[4*p+ch]=rpByte(X[3*i+ch]*MT[k][ch]/MB[k][ch])}
+  return true}
+// couleur du projet utilisée -> couleur de la bobine qui l'imprime dans le plan affiché (pour une couleur copiée : la première)
+function previewPairs(){var r=D.report||{},rows=mapping(),to={},seen={},out=[];
+  rows.filter(function(x){return !x.copy}).concat(rows.filter(function(x){return x.copy})).forEach(function(row){if(to[row.t]!==undefined)return;
+    var sp=spoolFor(row),c=sp&&hx(sp.color);if(c)to[row.t]=c});
+  (r.slicer_colors||[]).forEach(function(c){var b=hx(c.hex);if(!b||!usedT(c.t)||seen[b])return;seen[b]=1;out.push([b,to[c.t]||b])});
+  return out.length?out:null}
+function rpRun(key,src,pr){if(RP.busy)return;RP.busy=key;var im=new Image();
+  var done=function(u){if(RP.src===src)RP.cache[key]=u||null;RP.busy=null;thumbShow()};
+  im.onload=function(){setTimeout(function(){var u=null;try{var w=im.naturalWidth,h=im.naturalHeight;
+      if(w&&h&&w*h<=640*640){var cv=document.createElement("canvas");cv.width=w;cv.height=h;var cx=cv.getContext("2d");cx.drawImage(im,0,0);
+        var d=cx.getImageData(0,0,w,h);if(repaint(d.data,w,h,pr.map(function(x){return x[0]}),pr.map(function(x){return x[1]}))){cx.putImageData(d,0,0);u=cv.toDataURL("image/png")}}}
+      catch(e){u=null}
+    done(u)},0)};
+  im.onerror=function(){done(null)};im.src=src}
+function thumbInfo(){var th=D.info&&D.info.thumb;if(!th)return null;if(RP.src!==th){RP.src=th;RP.cache={};RP.busy=null}
+  var pr=D.report?previewPairs():null;if(!pr||pr.every(function(x){return x[0]===x[1]}))return {src:th};
+  var key=pr.map(function(x){return x[0]+">"+x[1]}).join(","),c=RP.cache[key];
+  if(c===undefined){rpRun(key,th,pr);return {src:th}}
+  if(!c)return {src:th};
+  return S.thOrig?{src:th,alt:true}:{src:c,mine:true,alt:true}}
+function thumbTip(t){return t.alt?(t.mine?"Aperçu aux couleurs des bobines choisies (approximatif). Clic : couleurs du projet.":"Couleurs du projet. Clic : couleurs des bobines choisies."):""}
+function thumbBox(){var t=thumbInfo();if(!t)return "";
+  return '<div class="th'+(t.alt?' alt':'')+'" id="thumb"'+(t.alt?' title="'+esc(thumbTip(t))+'"':'')+'><img src="'+esc(t.src)+'" alt="">'+
+    (t.alt?'<span class="tl">'+(t.mine?'tes bobines':'projet')+'</span>':'')+'</div>'}
+function thumbShow(){var el=document.getElementById("thumb");if(!el)return;var t=thumbInfo();if(!t)return;var im=el.querySelector("img");
+  if(im&&im.getAttribute("src")!==t.src)im.setAttribute("src",t.src);
+  var lb=el.querySelector(".tl"),want=t.alt?(t.mine?"tes bobines":"projet"):"";
+  if(want&&!lb){lb=document.createElement("span");lb.className="tl";el.appendChild(lb)}
+  if(lb){if(want){if(lb.textContent!==want)lb.textContent=want}else lb.remove()}
+  el.classList.toggle("alt",!!t.alt);if(t.alt)el.setAttribute("title",thumbTip(t));else el.removeAttribute("title")}
+// ---- 0.45.0 : assez de filament ? Grammes du fichier (OrcaSlicer) par bobine du plan affiché, contre le poids
+// restant noté dans la table des bobines multiACE (rien si le poids n'est pas connu). Sans la purge des échanges.
+function spoolAt(row){if(row.copy||row.pin)return null;
+  if(HM()&&row.tier==="planned"){var p=hplace(planKey(),row);if(!p)return null;
+    if(p.ok)return p.ace!=null&&p.slot!=null?{ace:p.ace,slot:p.slot,color:p.have}:null;
+    return p.src&&p.src.ace!=null?{ace:p.src.ace,slot:p.src.slot,color:p.src.color}:null}
+  if(!row.slot)return null;
+  if(row.tier==="planned"){var s=srcOf(row.t);return s?{ace:s.ace,slot:s.slot,color:s.color}:null}
+  return {ace:row.slot.ace,slot:row.slot.slot,color:row.slot.color}}
+function lowSpools(rows){var g=I().grams||[],need={},cp={},out=[];
+  rows.forEach(function(r){if(r.copy)cp[r.t]=1});
+  rows.forEach(function(r){if(cp[r.t]||!(g[r.t]>0))return;var at=spoolAt(r);if(!at||at.ace==null||at.slot==null)return;
+    var k=at.ace+"_"+at.slot,n=need[k]=need[k]||{at:at,g:0,ts:[]};n.g+=g[r.t];if(n.ts.indexOf(r.t+1)<0)n.ts.push(r.t+1)});
+  Object.keys(need).sort().forEach(function(k){var x=L().slots[k],n=need[k];if(!x||!(x.grams>0))return;
+    if(x.grams<n.g*1.1)out.push({at:n.at,have:x.grams,need:n.g,ts:n.ts,short:x.grams<n.g})});
+  return out}
+function lowText(x){return (x.short?"Pas assez de filament : ":"Filament juste : ")+where(x.at)+(hasHex(x.at.color)?" ("+cname(x.at.color)+")":"")+
+  " a encore "+Math.round(x.have)+" g, il en faut environ "+Math.round(x.need)+" g (filament "+x.ts.join(", ")+")"+(x.short?".":", sans compter la purge.")}
+// ---- 0.45.0 : réglages de l'imprimante, enregistrés sur la U1 au clic (comme sur son écran). Affichés seulement
+// si la U1 les connaît (null = inconnu).
+var PSET=[["airprint","Air-Print Detection","pause quand une voie ne fait plus avancer le filament, avant d’imprimer dans le vide (multiACE)"],
+  ["quad","Quad Replenish","bobine finie : recharge depuis une voie de même matière et couleur, puis reprend (multiACE)"],
+  ["refill","Auto-refill de la U1","bobine finie : une autre tête chargée du même filament prend le relais"],
+  ["spaghetti","Détection des spaghettis","caméra de la U1","spaghetti_sens"],
+  ["objects","Objets sur le plateau","caméra de la U1, avant d’imprimer","objects_sens"],
+  ["led","Éteindre la lumière à la fin","lumière de la U1"]];
+function psetHTML(){var P=D.printer;if(!P)return "";var ks=PSET.filter(function(x){return P[x[0]]===true||P[x[0]]===false});if(!ks.length)return "";
+  var h='<div class="start pset"><h2>Réglages de l’imprimante</h2><p class="h2s">Enregistrés sur la U1 dès que tu cliques, comme sur son écran.</p><div class="og">';
+  ks.forEach(function(x){var k=x[0],w=S.pw[k],v=w==="wait"?!!S.pv[k]:!!P[k],sk=x[3];
+    h+='<div class="psi"><label class="cb"><input type="checkbox" class="ps" data-ps="'+k+'"'+(v?' checked':'')+(w==="wait"?' disabled':'')+'><i class="bx"></i><span>'+esc(x[1])+
+      (w==="wait"?' <em class="pw">…</em>':w==="ok"?' <em class="okc">✓</em>':'')+'<small>'+esc(x[2])+'</small></span></label>';
+    // sensibilité de la caméra : deux niveaux dans la U1 (basse = réglage d'usine, haute = plus de détections)
+    if(sk&&(P[sk]==="low"||P[sk]==="high")){var sw=S.pw[sk],sv=sw==="wait"?S.pv[sk]:P[sk];
+      h+='<div class="sens"><span>Sensibilité</span>'+[["low","basse"],["high","haute"]].map(function(o){return '<button class="sg'+(sv===o[0]?' on':'')+'" data-sk="'+sk+'" data-v="'+o[0]+'" aria-pressed="'+(sv===o[0])+'"'+(sw==="wait"?' disabled':'')+'>'+o[1]+'</button>'}).join("")+
+        (sw==="wait"?'<em class="pw">…</em>':sw==="ok"?'<em class="okc">✓</em>':'')+'</div>'}
+    h+='</div>'});
+  return h+'</div>'+(S.pe?'<p class="note warnc">'+esc(S.pe)+'</p>':'')+'</div>'}
 function header(){var r=D.report||{},th=D.info&&D.info.thumb,cols=(r.slicer_colors||[]).filter(function(c){return usedT(c.t)}),g=I().grams||[],tot=0;
   cols.forEach(function(c){if(g[c.t]>0)tot+=g[c.t]});
   var p=planOf(planKey()||baseKey())||{};
   var facts=[];if(cols.length)facts.push(cols.length+" filament"+(cols.length>1?"s":""));if(tot>0)facts.push(Math.round(tot)+" g");if(p.tool_changes!=null)facts.push(p.tool_changes+" changements d’outil");
-  var h='<div class="hd">'+(th?'<div class="th"><img src="'+esc(th)+'" alt=""></div>':'')+'<div class="tt"><h1>'+esc(D.name||"multiACE Preflight")+'</h1>'+
+  var h='<div class="hd">'+(th?thumbBox():'')+'<div class="tt"><h1>'+esc(D.name||"multiACE Preflight")+'</h1>'+
     '<p>'+(facts.length?'<b>'+esc(facts.join(", "))+'.</b> ':'')+'Plans calculés par le multiACE'+(D.version?' '+esc(D.version):'')+' de ta U1<span title="'+esc(D.sha||"")+'">.</span></p></div>';
   if(cols.length)h+='<div class="fils">'+cols.map(function(c){return '<div title="'+esc(c.name||'')+'"><span class="n">'+(c.t+1)+'</span>'+dot(c.hex)+esc(cname(c.hex))+(g[c.t]>0?'<span class="g">'+(g[c.t]<10?g[c.t].toFixed(1):Math.round(g[c.t]))+' g</span>':'')+'</div>'}).join("")+'</div>';
   return h+'</div>'}
@@ -3184,6 +3435,7 @@ function barHTML(LAY){var r=D.report,blk=S.busy||!planKey()||(LAY&&!LAY.ready);
 function render(){
   var a=document.getElementById("app"),r=D.report,h='';
   if(S.mode==="place"&&r){var LP=placement();if(LP&&!LP.ready){renderPlace(LP);return}S.mode="plan"}
+  if(r&&S.sel===null){var pl0=r.plans||{};planKeys().forEach(function(k){if(S.sel===null&&pl0[k]&&pl0[k].feasible)S.sel=k})}   // avant l'en-tête : l'aperçu suit le plan choisi
   h+=header();
   if(D.banner)h+='<div class="notice info">'+esc(D.banner)+'</div>';
   if(D.loading&&!r)h+='<div class="loading"><div class="spin"></div>'+esc(D.loading)+'</div>';
@@ -3199,6 +3451,7 @@ function render(){
       if(!row.slot&&!row.pin)al.push(HM()?"Filament "+(row.t+1)+" : aucune bobine de sa matière (ACE ou chargeur latéral).":"Filament "+(row.t+1)+" : aucune bobine dans les ACE.")});
     if(HM())(r.unconnected_heads||[]).forEach(function(u){al.push("T"+(u.head+1)+" : l’ACE "+(u.ace+1)+" n’est pas connecté.")});
     if(r.nozzles_mixed)al.push("Buses de diamètres différents dans ce fichier : vérifie la proposition.");
+    lowSpools(rows).forEach(function(x){al.push(lowText(x))});
     if(al.length)h+='<ul class="alerts">'+al.map(function(x){return '<li><i class="sq"></i><span>'+esc(x)+'</span></li>'}).join("")+'</ul>';
     var WR=wrongs(rows);if(WR.length)h+=wrongHTML(WR);
     LAY=placement();var q=planOf(planKey())||{};
@@ -3213,7 +3466,7 @@ function render(){
     if(LAY&&!LAY.ready){var outs2=LAY.order.filter(function(m){return m.out});
       if(outs2.length)h+='<div class="rm"><span>À sortir des ACE&nbsp;:</span>'+outs2.map(function(m){return '<span>'+dot(m.out.color)+'<b>'+esc(cname(m.out.color))+'</b>, '+esc(where(m.to))+'</span>'}).join("")+'</div>';
       h+='<div class="mapfoot"><button id="place">Placer pas à pas</button><p>Un geste à la fois, avec un bouton «&nbsp;C’est fait&nbsp;» pour chacun.</p></div>'}
-    h+=startHTML(rows)+'</div></div>';
+    h+=startHTML(rows)+endHTML(rows)+psetHTML()+'</div></div>';
   }
   h+=barHTML(LAY);
   a.innerHTML=h;
@@ -3274,8 +3527,8 @@ function renderPlace(LAY){var a=document.getElementById("app"),steps=LAY.order,c
 function gv(i){var e=document.getElementById(i);return !!(e&&e.checked)}
 function send(act){S.busy=true;S.msg=null;S.more=false;var fh=[];Array.prototype.forEach.call(document.querySelectorAll(".fh"),function(e){if(e.checked)fh.push(+e.dataset.h)});
   var f={};Object.keys(S.forced).forEach(function(k){f[k]=S.forced[k]});
-  var m={a:act,plan:planKey(),bed:gv("bed"),zone:gv("zone"),flow:gv("flow"),cam:gv("cam"),soft:gv("soft"),flow_heads:fh,forced:f};
-  D.prefs={bed:m.bed,zone:m.zone,flow:m.flow,cam:m.cam,soft:m.soft};render();post(m)}
+  var m={a:act,plan:planKey(),bed:gv("bed"),zone:gv("zone"),flow:gv("flow"),cam:gv("cam"),soft:gv("soft"),flow_heads:fh,forced:f,unload:endU(),unload_heads:endHeads()};
+  D.prefs={bed:m.bed,zone:m.zone,flow:m.flow,cam:m.cam,soft:m.soft,unload:m.unload};render();post(m)}
 function bind(){
   var q=function(s){return document.querySelectorAll(s)},on=function(i,f){var e=document.getElementById(i);if(e)e.onclick=f};
   Array.prototype.forEach.call(q('.pr[data-plan]'),function(e){if(e.classList.contains("off"))return;e.onclick=function(ev){if(ev.target.closest("button"))return;S.sel=e.dataset.plan;S.flow=null;render()}});
@@ -3284,6 +3537,7 @@ function bind(){
   Array.prototype.forEach.call(q('[data-ch]'),function(e){e.onclick=function(ev){ev.stopPropagation();var t=+e.dataset.ch;if(e.dataset.v==="")delete S.forced[t];else S.forced[t]=HM()?e.dataset.v:+e.dataset.v;S.open=null;S.flow=null;askFest();render()}});
   Array.prototype.forEach.call(q('[data-rl]'),function(b){b.onclick=function(){S.busy=true;S.msg=null;render();post({a:"reload"})}});
   Array.prototype.forEach.call(q('.fh'),function(e){e.onchange=function(){var h=+e.dataset.h,i=S.flow.indexOf(h);if(e.checked&&i<0)S.flow.push(h);if(!e.checked&&i>=0)S.flow.splice(i,1)}});
+  var eu=document.getElementById("endu");if(eu)eu.onchange=function(){S.endU=eu.value===""?"":eu.value==="all"?"all":+eu.value};
   ["bed","flow","zone","cam","soft"].forEach(function(k){var e=document.getElementById(k);if(e)e.onchange=function(){D.prefs=D.prefs||{};D.prefs[k]=e.checked;render()}});
   Array.prototype.forEach.call(q('[data-nw]'),function(b){b.onclick=function(){var t=b.dataset.to.split("_").map(Number);
     S.busy=true;S.msg=null;render();post({a:"newspool",step:+b.dataset.nw,t:+b.dataset.t,to_ace:t[0],to_slot:t[1]})}});
@@ -3291,6 +3545,11 @@ function bind(){
     S.busy=true;S.msg=null;render();post({a:"moved",step:+b.dataset.mv,from_ace:f[0],from_slot:f[1],to_ace:t[0],to_slot:t[1]})}});
   Array.prototype.forEach.call(q('[data-pre]'),function(b){b.onclick=function(){var v=b.dataset.pre.split("_").map(Number);b.disabled=true;b.textContent="Ajoutée à la file";post({a:"precal",head:v[0],ace:v[1],slot:v[2]})}});
   on("fo",function(){S.forceOpen=!S.forceOpen;render()});
+  on("thumb",function(){var el=document.getElementById("thumb");if(el&&el.classList.contains("alt")){S.thOrig=!S.thOrig;thumbShow()}});
+  Array.prototype.forEach.call(q('.ps'),function(e){e.onchange=function(){var k=e.dataset.ps;if(S.pw[k]==="wait")return;
+    S.pw[k]="wait";S.pv[k]=e.checked;S.pe=null;render();post({a:"pset",key:k,on:e.checked})}});
+  Array.prototype.forEach.call(q('.sg'),function(b){b.onclick=function(){var k=b.dataset.sk,v=b.dataset.v;if(S.pw[k]==="wait"||b.classList.contains("on"))return;
+    S.pw[k]="wait";S.pv[k]=v;S.pe=null;render();post({a:"pset",key:k,value:v})}});
   on("unforce",function(){S.forced={};S.flow=null;render()});
   on("place",function(){S.mode="place";S.msg=null;render();window.scrollTo(0,0)});
   on("back",function(){S.mode="plan";S.msg=null;render()});
@@ -3338,7 +3597,8 @@ function celebrate(){m3hide();var o=document.createElement("div");o.id="m3ov";o.
   o.innerHTML='<div class="m3box">'+m3svg()+'<h2 class="m3txt">Impression lancée !</h2><p class="m3txt m3sub">Bon appétit, la U1 !</p><p class="m3txt m3file">'+esc(D.name||"")+'</p><small class="m3txt">Mange-3MF · clic pour fermer</small></div>';
   o.onclick=m3hide;document.body.appendChild(o);
   var rm=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;M3T=setTimeout(m3hide,rm?3500:5800)}
-window.__orca_on_message=function(m){if(m.type==="data"){var keep=D.report&&m.data.report&&D.name===m.data.name;D=m.data;if(!keep){S.sel=null;S.forced={};S.mode="plan"}S.unl={};S.ld={};S.fest=null;if(forcedOn())askFest();S.flow=null;S.busy=false;S.msg=null;S.done={}}
+window.__orca_on_message=function(m){if(m.type==="data"){var keep=D.report&&m.data.report&&D.name===m.data.name;D=m.data;if(!keep){S.sel=null;S.forced={};S.mode="plan"}S.unl={};S.ld={};S.pw={};S.pv={};S.pe=null;S.fest=null;if(forcedOn())askFest();S.flow=null;S.busy=false;S.msg=null;S.done={}}
+  else if(m.type==="pset"){if(m.printer)D.printer=m.printer;S.pw[m.key]=m.ok?"ok":"err";S.pe=m.ok?null:(m.err||null)}
   else if(m.type==="fest"){if(S.fest&&S.fest.key===m.key){S.fest.res=m.res||null;S.fest.wait=false}}
   else if(m.type==="done"){S.busy=!!m.final;S.msg=m;if(m.final&&m.ok)celebrate();
     if(m.ok&&m.step!=null){S.done[m.step]=true;var LD=placement();
@@ -3356,6 +3616,77 @@ render();
 U1_PAGE = U1_PAGE.replace("/*__FONTS__*/", FONT_CSS)
 
 
+# 0.45.0 : réglages de l'imprimante dans la fenêtre d'envoi. Lus dans la U1 (multiACE /state, Moonraker via nginx),
+# changés par l'API macro de multiACE (même chemin que son interface web) ; la U1 les enregistre, comme sur son écran.
+# None = réglage inconnu de cette U1 (firmware ou multiACE trop ancien) : la fenêtre ne l'affiche pas.
+PSET_KEYS = ("airprint", "quad", "refill", "spaghetti", "objects", "led", "spaghetti_sens", "objects_sens")
+PSET_LEVELS = ("low", "high")        # sensibilité de la caméra : les deux niveaux de la U1 (« low » = réglage d'usine)
+
+
+def printer_settings(client, timeout=TIMEOUT_UI):
+    """État des réglages de l'imprimante. Lecture seule."""
+    out = dict.fromkeys(PSET_KEYS)
+    try:
+        st = client.state(timeout=timeout)
+    except Exception:
+        st = {}
+    if isinstance(st, dict):
+        if isinstance(st.get("airprint_detection"), bool):           # multiACE 1.90+
+            out["airprint"] = st["airprint_detection"]
+        if isinstance(st.get("quad_replenish"), bool):
+            out["quad"] = st["quad_replenish"]
+    url = (origin_of(client.host) + "/printer/objects/query?print_task_config=auto_replenish_filament,end_led_turn_off"
+           "&defect_detection")                                       # Moonraker via nginx :80
+    try:
+        with _OPENER.open(url, timeout=timeout) as resp:
+            status = json.loads(resp.read().decode("utf-8"))["result"]["status"]
+    except Exception:
+        status = {}
+    if not isinstance(status, dict):
+        status = {}
+    ptc = status.get("print_task_config")
+    if isinstance(ptc, dict):
+        if isinstance(ptc.get("auto_replenish_filament"), bool):
+            out["refill"] = ptc["auto_replenish_filament"]
+        if isinstance(ptc.get("end_led_turn_off"), bool):
+            out["led"] = ptc["end_led_turn_off"]
+    dd = status.get("defect_detection")
+    if isinstance(dd, dict):
+        main = dd.get("main_enable") is True                          # interrupteur général de la caméra
+        for key, sec in (("spaghetti", "noodle"), ("objects", "clean_bed")):
+            s = dd.get(sec)
+            if isinstance(s, dict) and isinstance(s.get("enable"), bool):
+                out[key] = main and s["enable"]
+            if isinstance(s, dict) and s.get("sensitivity") in PSET_LEVELS:
+                out[key + "_sens"] = s["sensitivity"]
+    return out
+
+
+def printer_setting_command(key, value):
+    """(commande, arguments) pour changer un réglage ; None si la clé ou la valeur ne va pas (marche/arrêt :
+    un vrai booléen ; sensibilité : « low » ou « high »)."""
+    if key == "spaghetti_sens" and value in PSET_LEVELS:
+        return "DEFECT_DETECTION_CONFIG", {"NOODLE_SENSITIVITY": value}
+    if key == "objects_sens" and value in PSET_LEVELS:
+        return "DEFECT_DETECTION_CONFIG", {"CLEAN_BED_SENSITIVITY": value}
+    if not isinstance(value, bool):
+        return None
+    on, v = value, 1 if value else 0
+    if key == "airprint":
+        return "ACE_SET_AIRPRINT_DETECTION", {"ENABLE": v}
+    if key == "quad":
+        return "ACE_SET_QUAD_REPLENISH", {"ENABLE": v}
+    if key == "refill":
+        return "SET_PRINT_PREFERENCES", {"AUTO_REPLENISH_FILAMENT": v}
+    if key == "led":
+        return "SET_PRINT_PREFERENCES", {"END_LED_TURN_OFF": v}
+    if key == "spaghetti":                    # allumer : aussi l'interrupteur général ; éteindre : ce contrôle seul
+        return "DEFECT_DETECTION_CONFIG", {"MAIN_ENABLE": 1, "NOODLE_ENABLE": 1} if on else {"NOODLE_ENABLE": 0}
+    if key == "objects":
+        return "DEFECT_DETECTION_CONFIG", {"MAIN_ENABLE": 1, "CLEAN_BED_ENABLE": 1} if on else {"CLEAN_BED_ENABLE": 0}
+    return None
+
+
 class U1PreflightWindow:
     """Proposition calculee par le code de la U1 ; verifie tout avant d'envoyer."""
 
@@ -3363,7 +3694,7 @@ class U1PreflightWindow:
         self.window = None
         self.job = None
         self.live_sig = None
-        self.prefs = {"bed": True, "zone": True, "flow": False, "cam": False, "soft": True}
+        self.prefs = {"bed": True, "zone": True, "flow": False, "cam": False, "soft": True, "unload": None}
         self.report = None
         self.info = None
         self.load = None
@@ -3422,6 +3753,7 @@ class U1PreflightWindow:
                 except OSError:
                     break
             load = load_info(client)
+            printer = printer_settings(client)
             can_queue = False
             try:
                 q = client.get_json("/queue", timeout=TIMEOUT_BG)     # file Print Hub (multiACE 1.90+)
@@ -3448,7 +3780,7 @@ class U1PreflightWindow:
             n_ev, ev_t = event_fractions(_LAST_CAPTURE.get(path))
             self._send({"name": name, "version": version, "sha": sha, "report": report, "labels": PLAN_LABELS,
                         "prefs": self.prefs, "info": info, "load": load, "can_force": bool(caps.get("remap")),
-                        "can_queue": can_queue, "n_ev": n_ev, "ev_t": ev_t})
+                        "can_queue": can_queue, "n_ev": n_ev, "ev_t": ev_t, "printer": printer})
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -3505,13 +3837,21 @@ class U1PreflightWindow:
         elif a in ("print", "upload", "queue") and m.get("plan") in (
                 HEAD_LABELS if (self.report or {}).get("head_mode") else PLAN_LABELS):
             self.prefs = {k: m.get(k) is True for k in ("bed", "zone", "flow", "cam", "soft")}
+            self.prefs["unload"] = end_unload_choice(m.get("unload"))
             prefs = dict(self.prefs)
+            if self.prefs["unload"] is not None:
+                prefs["unload_heads"] = end_unload_heads(m.get("unload_heads"))
             fh = m.get("flow_heads")
             if isinstance(fh, list):
                 prefs["flow_heads"] = [h for h in fh if isinstance(h, int) and not isinstance(h, bool) and 0 <= h <= 3]
             forced = m.get("forced") if isinstance(m.get("forced"), dict) else {}
             threading.Thread(target=self._print, args=(m["plan"], prefs, forced, a),
                              daemon=True).start()
+        elif a == "pset":
+            key = m.get("key")
+            val = m.get("value") if str(key).endswith("_sens") else m.get("on")
+            if printer_setting_command(key, val):          # clé connue et valeur du bon type, sinon rien
+                threading.Thread(target=self._pset, args=(key, val), daemon=True).start()
         elif a == "precal":
             try:
                 h, ace, sl = int(m.get("head")), int(m.get("ace")), int(m.get("slot"))
@@ -3552,6 +3892,30 @@ class U1PreflightWindow:
             threading.Thread(target=self._newspool, args=(m,), daemon=True).start()
         elif a == "forced_est" and isinstance(m.get("forced"), dict):
             threading.Thread(target=self._forced_est, args=(m,), daemon=True).start()
+
+    def _pset(self, key, value):
+        """Réglage de l'imprimante changé dans la fenêtre : commande envoyée à la U1, puis état relu."""
+        job = self.job
+        cmd = printer_setting_command(key, value)
+        if not job or not cmd:
+            return
+        client = MultiAce(job["host"])
+        ok, err = True, None
+        try:
+            client.macro(cmd[0], cmd[1], timeout=60)
+        except PermissionError:
+            ok, err = False, permission_text(job["host"])
+        except MultiAceError as e:
+            ok, err = False, "Réglage non enregistré : %s" % friendly_error(str(e))
+        except Exception as e:
+            ok, err = False, "Réglage non enregistré : %s" % e
+        printer = printer_settings(client)
+        w = self.window
+        if w is not None and self.job is job:
+            try:
+                w.post({"type": "pset", "key": key, "ok": ok, "err": err, "printer": printer})
+            except Exception:
+                pass
 
     def _forced_est(self, m):
         res = None
@@ -3703,6 +4067,7 @@ class U1PreflightWindow:
                         "avant la 1re couche)." % ", ".join("T%d" % (h + 1) for h in heads)) if heads else \
                        (" ⚠ Pas de chargement automatique dans le fichier : vérifie que les bonnes bobines sont "
                         "sur les têtes avant de lancer." if heads is None else "")
+            load_txt += end_unload_note(final, prefs)
             base, ext = os.path.splitext(os.path.basename(job["name"]))
             target = base + "_multiACE" + (ext or ".gcode")
             what = "le plan « %s »%s" % (PLAN_LABELS[shown], " et tes bobines imposées" if forced else "")
@@ -3762,6 +4127,7 @@ class U1PreflightWindow:
             heads = autoload_heads(final)
             load_txt = (" Chargement automatique au départ : %s (têtes des ACE chargées avant la 1re couche)."
                         % ", ".join("T%d" % (h + 1) for h in heads)) if heads else ""
+            load_txt += end_unload_note(final, prefs)
             base, ext = os.path.splitext(os.path.basename(job["name"]))
             target = base + "_multiACE" + (ext or ".gcode")
             what = "le plan « %s »%s" % (HEAD_LABELS[plan_name], " et tes bobines imposées" if forced else "")
@@ -4062,6 +4428,14 @@ details.pf{margin-top:7px}details.pf summary{cursor:pointer;color:var(--fog);fon
 .dryrow .dnote{flex-basis:100%;font-size:10.5px;line-height:1.3;color:var(--fog);padding-top:3px}
 .gut .dwait{font-weight:500;font-size:10px;color:var(--fog)}
 .dryrow select{height:24px}
+.gut button.on{border-color:var(--teal);color:#7FE0D6}
+.adrow{display:flex;align-items:center;gap:6px 9px;flex-wrap:wrap;padding:8px 9px 2px;font-size:11.5px;color:var(--fog);position:relative;z-index:2}
+.adrow label{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.adrow .adon{color:var(--chalk);font-weight:600;cursor:pointer}
+.adrow .adon input{margin:0;accent-color:var(--teal)}
+.adrow select{height:24px}
+.adrow .dnote{flex-basis:100%;font-size:10.5px;line-height:1.3;color:var(--fog);padding-top:1px}
+.adrow .dnote.warnc{color:var(--amber)}
 .dprog{height:3px;border-radius:2px;background:#383B41;margin:7px 9px 0;overflow:hidden;position:relative;z-index:2}.dprog i{display:block;height:100%;background:var(--amber)}
 .slot{display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;padding-left:16px;min-width:0;position:relative;z-index:2}
 .slot .lab{display:flex;flex-direction:column;align-items:center;max-width:100%;min-height:26px}
@@ -4175,7 +4549,7 @@ body.compact .heads{padding-bottom:8px}
 <script>
 (function(){
   var $=function(i){return document.getElementById(i)};
-  var S={base:1,busy:false,locked:false,armed:null,dt:{},dd:{},edit:null,last:null,sel:null,dryOpen:{},fold:{},dry:{}};
+  var S={base:1,busy:false,locked:false,armed:null,dt:{},dd:{},edit:null,last:null,sel:null,dryOpen:{},fold:{},dry:{},adOpen:{},adPend:{},ace2:false};
   var EN=document.documentElement.lang==="en";
   var SVGNS="http://www.w3.org/2000/svg";
   function esc(x){var d=document.createElement("span");d.textContent=x==null?"":String(x);return d.innerHTML}
@@ -4261,6 +4635,38 @@ body.compact .heads{padding-bottom:8px}
   // séchage long (0.44) : au-delà de 10 h, l’ACE sèche par cycles que le plugin relance (plan envoyé avec l’état)
   var DURS=[60,120,240,360,480,720,1440,2880,4320,7200,10080],DRY_RUN=600;
   function dplan(a){var p=S.dry&&S.dry[a.idx];return p&&typeof p.end==="number"&&typeof p.start==="number"?p:null}
+  // séchage auto (0.46) : un ACE 2 mesure son humidité et sèche tout seul entre deux seuils ; un ACE Pro, sans capteur,
+  // suit un ACE 2 et continue un temps après lui. Réglages gardés par multiACE sur la U1 (ACE_SET_AUTO_DRY).
+  function isV2(a){return a.has_humidity===true}
+  function autoOK(a){return S.ace2&&!!a.auto_dry&&typeof a.auto_dry==="object"&&a.has_dryer!==false}
+  function adv(a,k,live){var p=S.adPend[a.idx+"_"+k];return p!=null?p:live}
+  function nint(v,d){v=Math.round(Number(v));return v===v&&isFinite(v)?v:d}
+  function mlab(m){if(m<60)return m+" min";var h=Math.floor(m/60),r=m%60;return h+" h"+(r?" "+(r<10?"0":"")+r:"")}
+  function adOpts(vals,cur,lab){if(vals.indexOf(cur)<0)vals=vals.concat([cur]).sort(function(x,y){return x-y});
+    return vals.map(function(v){return '<option value="'+v+'"'+(v===cur?" selected":"")+'>'+(lab?lab(v):v)+'</option>'}).join("")}
+  function aceLabel(st,i){var o=(st.aces||[]).filter(function(y){return y.idx===i})[0];return o?aceName(o):"ACE "+n(i)}
+  function adTip(st,a){var c=a.auto_dry||{};if(!c.enabled)return "Séchage auto désactivé";
+    if(isV2(a))return "Séchage auto : démarre au-dessus de "+nint(c.rh_start,45)+" %, s’arrête sous "+nint(c.rh_end,35)+" % ("+nint(c.temp,50)+" °C)";
+    var m=nint(c.master,-1);
+    return m>=0?"Séchage auto : suit l’humidité de "+aceLabel(st,m)+" ("+nint(c.temp,50)+" °C, prolongé de "+mlab(nint(c.add_time,60))+")":"Séchage auto : aucun ACE 2 Pro à suivre"}
+  function adrowHTML(st,a){
+    var c=a.auto_dry||{},k=a.idx,t=nint(adv(a,"TEMP",c.temp),50),sel=function(key,opts){return '<select data-ad="'+k+'" data-k="'+key+'">'+opts+'</select>'},
+        temp='<label>chauffe à '+sel("TEMP",adOpts([40,45,50,55],t))+' °C</label>',dis=false,body,note;
+    if(isV2(a)){var s=nint(adv(a,"RH_START",c.rh_start),45),e=nint(adv(a,"RH_END",c.rh_end),35);
+      body='<label>démarre au-dessus de '+sel("RH_START",adOpts([30,35,40,45,50,55,60,65,70].filter(function(v){return v>e}),s))+' %</label>'+
+        '<label>s’arrête sous '+sel("RH_END",adOpts([15,20,25,30,35,40,45,50,55,60].filter(function(v){return v<s}),e))+' %</label>'+temp;
+      note="L’ACE 2 Pro mesure son humidité : il sèche tout seul au-dessus du premier seuil et s’arrête sous le second. Ça se passe sur la U1, même OrcaSlicer fermé, mais pas pendant une impression (réglage de multiACE)."}
+    else{var m=nint(adv(a,"MASTER",c.master),-1),ad=nint(adv(a,"ADD_TIME",c.add_time),60),
+          ms=(st.auto_dry_masters||[]).map(Number).filter(function(x){return x===x&&x!==k});
+      if(m>=0&&ms.indexOf(m)<0)ms.push(m);
+      body='<label>suit l’humidité de '+sel("MASTER",'<option value="-1"'+(m<0?" selected":"")+'>aucun ACE 2 Pro</option>'+
+          ms.map(function(x){return '<option value="'+x+'"'+(x===m?" selected":"")+'>'+aceLabel(st,x)+'</option>'}).join(""))+'</label>'+temp+
+        '<label>prolongé de '+sel("ADD_TIME",adOpts([0,15,30,60,90,120,180,240],ad,mlab))+'</label>';
+      dis=m<0;
+      note=dis?"Choisis d’abord l’ACE 2 Pro à suivre.":"L’ACE Pro n’a pas de capteur d’humidité : il sèche en même temps que l’ACE 2 Pro choisi, puis continue le temps indiqué, parce qu’il est moins étanche."}
+    var on=!dis&&!!nint(adv(a,"ENABLE",c.enabled?1:0),0);
+    return '<div class="adrow" data-adrow="'+k+'"><label class="adon"><input type="checkbox" data-ad="'+k+'" data-k="ENABLE"'+(on?" checked":"")+(dis?" disabled":"")+'> Séchage auto</label>'+
+      body+'<div class="dnote'+(dis?" warnc":"")+'">'+note+'</div></div>'}
   function fmtLeft(s){var m=Math.max(0,Math.ceil(s/60)),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mi=m%60;
     if(d)return d+" "+(EN?"d":"j")+(h?" "+h+" h":"");if(h)return h+" h "+(mi<10?"0":"")+mi;return mi+" min"}
   function dlab(m){if(m<1440)return Math.round(m/60)+" h";var d=Math.round(m/1440);return d+" "+(EN?(d>1?"days":"day"):(d>1?"jours":"jour"))}
@@ -4274,8 +4680,10 @@ body.compact .heads{padding-bottom:8px}
     if(p){var dr=drying(a),tip="Durée choisie : "+dlab(Math.round((p.end-p.start)/60))+". L’ACE sèche par cycles de 10 h au plus : le plugin relance le suivant tant qu’OrcaSlicer est ouvert.";
       g+='<span class="drying" title="'+esc(tip)+'">'+(p.paused?'En pause':p.temp+' °C')+'<br>'+fmtLeft(p.end-Date.now()/1000)+(!dr&&!p.paused?'<br><span class="dwait">démarrage…</span>':'')+'</span>'+
         (p.paused?'<button data-act="redry" data-ace="'+a.idx+'">Relancer</button>':'')+'<button data-act="stopdry" data-ace="'+a.idx+'">Arrêter</button>'}
-    else if(drying(a))g+='<span class="drying">'+(d.target_temp?d.target_temp+' °C':'Séchage')+(remain(a)?'<br>'+remain(a):'')+'</span><button data-act="stopdry" data-ace="'+a.idx+'">Arrêter</button>';
+    else if(drying(a))g+='<span class="drying">'+(a.auto_dry_running?'Auto<br>':'')+(d.target_temp?d.target_temp+' °C':'Séchage')+(remain(a)?'<br>'+remain(a):'')+'</span><button data-act="stopdry" data-ace="'+a.idx+'">Arrêter</button>';
     else g+='<button data-dry="'+a.idx+'"'+(S.dryOpen[a.idx]?' class="go"':'')+'>Sécher</button>';
+    if(autoOK(a)){var aon=!!(a.auto_dry||{}).enabled;
+      g+='<button data-adry="'+a.idx+'" class="'+(aon?"on":"")+(S.adOpen[a.idx]?" go":"")+'" title="'+esc(adTip(S.last||{},a))+'" aria-expanded="'+(S.adOpen[a.idx]?"true":"false")+'">'+(aon?"Auto ✓":"Auto")+'</button>'}
     return '<div class="gut">'+g+'</div>'}
   function trayHTML(st,a){
     var h='<div class="tray" data-ace="'+a.idx+'"><div class="mrow">'+gutHTML(a)+[0,1,2,3].map(function(si){var s=(a.slots||[]).filter(function(x){return x.idx===si})[0]||{idx:si,state:"empty"};return slotHTML(st,a,s)}).join("")+'</div>';
@@ -4285,6 +4693,7 @@ body.compact .heads{padding-bottom:8px}
         '<select data-dd="'+a.idx+'">'+DURS.map(function(v){return '<option value="'+v+'"'+(v===du?" selected":"")+'>'+dlab(v)+'</option>'}).join("")+'</select>'+
         '<span style="flex:1"></span><button class="go" data-act="dry" data-ace="'+a.idx+'">Lancer le séchage</button>'+
         (du>DRY_RUN?'<div class="dnote">Plus de 10 h : l’ACE sèche par cycles de 10 h, relancés par le plugin. Garde OrcaSlicer ouvert.</div>':'')+'</div>'}
+    if(autoOK(a)&&S.adOpen[a.idx])h+=adrowHTML(st,a);
     if(p){var pp=Math.max(0,Math.min(100,Math.round(100*(Date.now()/1000-p.start)/Math.max(1,p.end-p.start))));h+='<div class="dprog"><i style="width:'+pp+'%"></i></div>'}
     else if(drying(a)){var d=a.dryer||{},tot=Number(d.duration)||0,r=Math.round((Number(d.remain_time)||0)/60),pc=tot>0?Math.max(0,Math.min(100,Math.round(100-100*r/tot))):null;
       if(pc!=null)h+='<div class="dprog"><i style="width:'+pc+'%"></i></div>'}
@@ -4335,7 +4744,10 @@ body.compact .heads{padding-bottom:8px}
       if(nxt)hot+=lit(bx,top,bx,nxt.y,nxt.c,true)+lit(bx,nxt.y,nxt.x2,nxt.y,nxt.c,true);
       if(now)hot+=lit(bx,top,bx,now.y,now.c)+lit(bx,now.y,now.x2,now.y,now.c);
     });
-    var svg=document.createElementNS(SVGNS,"svg");svg.setAttribute("class","paths");svg.innerHTML=idle+hot;map.appendChild(svg)}
+    var svg=document.createElementNS(SVGNS,"svg");svg.setAttribute("class","paths");
+    var cut=Array.prototype.map.call(map.querySelectorAll(".adrow,.dryrow"),function(el){var r=box(el);return '<rect x="0" y="'+(r.t-2)+'" width="100%" height="'+(r.b-r.t+4)+'" fill="#000"/>'}).join("");
+    svg.innerHTML=cut?'<defs><mask id="pathcut" maskUnits="userSpaceOnUse" x="0" y="0" width="100%" height="100%"><rect x="0" y="0" width="100%" height="100%" fill="#fff"/>'+cut+'</mask></defs><g mask="url(#pathcut)">'+idle+hot+'</g>':idle+hot;
+    map.appendChild(svg)}
 
   // ---- fiche de la sélection (bobine ou tête)
   function renderSheet(st){
@@ -4484,7 +4896,7 @@ body.compact .heads{padding-bottom:8px}
     $("legacy").innerHTML=h}
 
   function render(st){
-    S.last=st;S.base=st.display_index_base===0?0:1;
+    S.last=st;S.base=st.display_index_base===0?0:1;S.ace2=(st.aces||[]).some(isV2);
     var ps=(st.printer_state||"").toLowerCase();
     S.locked=ps==="printing"||ps==="paused";
     var run=S.q&&S.q.items&&S.q.items.some(function(i){return i.status==="en cours"});
@@ -4553,6 +4965,7 @@ body.compact .heads{padding-bottom:8px}
     if(t.closest("[data-close]")){S.sel=null;S.edit=null;rerender();return}
     var ed=t.closest("[data-ed]");if(ed){var q=ed.dataset.ed.split("_");S.edit=S.edit&&S.edit.ace===+q[0]&&S.edit.slot===+q[1]?null:{ace:+q[0],slot:+q[1]};rerender();return}
     var dr=t.closest("[data-dry]");if(dr){var ai=+dr.dataset.dry;S.dryOpen[ai]=!S.dryOpen[ai];rerender();return}
+    var adb=t.closest("[data-adry]");if(adb){var aj=+adb.dataset.adry;S.adOpen[aj]=!S.adOpen[aj];rerender();return}
     if(t.id==="e_no"){S.edit=null;rerender();return}
     if(t.id==="e_rf"){var e1=t.closest(".ed");post({command:"reset",ace:+e1.dataset.ace,slot:+e1.dataset.slot});S.busy=true;say("Envoi…","info");S.edit=null;return}
     if(t.id==="e_ok"){var e2=t.closest(".ed"),hex=$("e_hex").value.trim();
@@ -4601,6 +5014,8 @@ body.compact .heads{padding-bottom:8px}
     if(t.id==="e_c")$("e_hex").value=t.value;
     if(t.id==="e_hex"&&/^#[0-9a-fA-F]{6}$/.test(t.value.trim()))$("e_c").value=t.value.trim()});
   document.addEventListener("change",function(e){var t=e.target;if(t.id==="bt")S.bt=+t.value;
+    if(t.dataset.ad!=null&&t.dataset.k){var ak=+t.dataset.ad,key=t.dataset.k,v=key==="ENABLE"?(t.checked?1:0):+t.value,args={};
+      if(v===v){args[key]=v;S.adPend[ak+"_"+key]=v;post({command:"autodry",ace:ak,args:args});say("Commande envoyée à la U1…","info");if(!S.edit)rerender()}return}
     if(t.dataset.dt!=null)S.dt[t.dataset.dt]=+t.value;if(t.dataset.dd!=null){S.dd[t.dataset.dd]=+t.value;if(!S.edit)rerender()}});
   $("rf").onclick=function(){post({command:"refresh"})};
   function hostBox(show,title){var b=$("hostbox");b.hidden=!show;S.hostEditing=!!show&&!!title&&title!=="Adresse de la U1 introuvable";$("hostTitle").textContent=title||"Adresse de la U1 introuvable";if(show){var i=$("hostIn");if(!i.value)i.value=S.host||""}}
@@ -4641,7 +5056,7 @@ body.compact .heads{padding-bottom:8px}
     else if(m.command==="prefs"){S.host=m.host||"";S.screen=m.screen||"off";S.cam=m.camera||"off";setCompact(!!m.compact);placeScreen();placeCam();
       S.prepPos=m.prep_pos==="bottom"?"bottom":"top";placePrep();S.fold=m.folds||{};$("ah").checked=!!m.auto_home;$("gf").checked=m.ace_guard!==false;
       $("uc").checked=m.u1_code!==false;$("ap").checked=m.auto_pipeline!==false;if($("lang"))$("lang").value=m.lang||"auto";$("hostCur").textContent=S.host||"non renseignée";if(!S.host)hostBox(true);renderPrep(S.prep)}
-    else if(m.command==="done"){S.busy=false;say(m.text,m.ok?"info":"err");
+    else if(m.command==="done"){S.busy=false;S.adPend={};say(m.text,m.ok?"info":"err");
       if(m.fix==="home"){var b=document.createElement("div");b.className="fix";
         b.innerHTML='<button class="go" data-r="1">Faire le homing puis reprendre</button><button data-r="0">Homing seul</button>';
         $("msg").appendChild(b);b.querySelectorAll("button").forEach(function(x){x.onclick=function(){S.busy=true;say("Homing en cours (G28)…","info");post({command:"home",retry:x.getAttribute("data-r")==="1"})}})}
@@ -4692,7 +5107,55 @@ def action_label(name, a):
         return "Calibration du plateau (%s °C)" % a.get("TEMP", 55)
     if name == "ACE_STOP_DRYING":
         return "Arrêt du séchage ACE %s" % g("ACE")
+    if name == "ACE_SET_AUTO_DRY":
+        if set(a) == {"ACE", "ENABLE"}:
+            return ("Séchage auto ACE %s activé" if str(a.get("ENABLE")) == "1" else
+                    "Séchage auto ACE %s désactivé") % g("ACE")
+        return "Réglage du séchage auto ACE %s" % g("ACE")
     return " ".join([name] + ["%s=%s" % kv for kv in a.items()])
+
+
+# --------------------------------------------------------------------------- séchage auto (0.46)
+#
+# multiACE (ACE_SET_AUTO_DRY) : un ACE 2 mesure son humidité et sèche tout seul au-dessus de RH_START, jusqu'à
+# passer sous RH_END, à TEMP. Un ACE Pro n'a pas de capteur : il suit un ACE 2 (MASTER, index de l'ACE) et
+# continue ADD_TIME minutes après lui. Les deux jeux de réglages sont séparés : multiACE refuse un réglage qui
+# ne va pas avec le type de l'ACE. Bornes : celles de multiACE ; la température ne monte pas au-dessus de ce
+# que l'ACE accepte (multiACE la refuse sinon).
+
+AUTO_DRY_RANGES = {"ENABLE": (0, 1), "RH_START": (5, 95), "RH_END": (1, 94), "TEMP": (35, 70),
+                   "MASTER": (-1, 3), "ADD_TIME": (0, 600)}
+
+
+def auto_dry_args(ace, args):
+    """Arguments vérifiés de ACE_SET_AUTO_DRY, ou None (ACE ou réglage invalide)."""
+    if isinstance(ace, bool):
+        return None
+    try:
+        if isinstance(ace, float) and ace != int(ace):
+            return None
+        ace = int(ace)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if not 0 <= ace <= 3 or not isinstance(args, dict) or not 0 < len(args) <= 3:
+        return None
+    out = {"ACE": ace}
+    for key, val in args.items():
+        rng = AUTO_DRY_RANGES.get(key)
+        if rng is None or isinstance(val, bool) or not isinstance(val, (int, float)):
+            return None
+        try:
+            if val != int(val):
+                return None
+        except (ValueError, OverflowError):
+            return None
+        val = int(val)
+        if not rng[0] <= val <= rng[1] or (key == "MASTER" and val == ace):
+            return None
+        out[key] = val
+    if "RH_START" in out and "RH_END" in out and out["RH_END"] >= out["RH_START"]:
+        return None
+    return out
 
 
 QUEUE_POLL = 2.0
@@ -4925,6 +5388,11 @@ class AcePanelController:
                     client.clear_override(ace, slot)
                     client.macro("MULTIACE_REFRESH_OVERRIDES", {}, timeout=60)
                 self._work("Retour a l'identite RFID", job)
+            return
+        elif cmd == "autodry":
+            args = auto_dry_args(message.get("ace"), message.get("args"))
+            if args:
+                self._run("ACE_SET_AUTO_DRY", args, allow_busy=True)
             return
         elif cmd in ("dry", "stopdry"):
             try:
@@ -5296,7 +5764,7 @@ class AcePanelController:
                 homed_now = True
         for attempt in (1, 2):
             try:
-                client.macro(name, args, timeout=60 if name in ("ACE_DRY", "ACE_STOP_DRYING")
+                client.macro(name, args, timeout=60 if name in ("ACE_DRY", "ACE_STOP_DRYING", "ACE_SET_AUTO_DRY")
                              else 1800 if name in CALIBRATIONS else 900)
                 break
             except PermissionError:
