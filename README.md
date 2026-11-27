@@ -26,6 +26,8 @@ New interface in 0.42: one lanes map for 1 to 4 ACEs, a print window that shows 
 
 **New in 0.46:** auto-dry by humidity with an ACE 2 Pro (an ACE Pro can follow it), and unloading the heads at the end of the print. / **Nouveau en 0.46 :** séchage auto selon l'humidité avec un ACE 2 Pro (un ACE Pro peut le suivre), et déchargement des têtes à la fin de l'impression.
 
+**New in 0.49:** the print window's header stays in view when you scroll, each spool on the map shows its material (PLA, PETG…), and choosing the spools yourself only offers spools of the filament's material, like multiACE's web Preflight. / **Nouveau en 0.49 :** l'en-tête de la fenêtre d'impression reste en vue quand tu fais défiler, chaque bobine de la carte affiche sa matière (PLA, PETG…), et le choix manuel des bobines ne propose que celles de la matière du filament, comme le Preflight web de multiACE.
+
 **New in 0.48:** with multiACE 1.94, the print window offers multiACE's choice between plans on the loaded spools and plans over all lanes. / **Nouveau en 0.48 :** avec multiACE 1.94, la fenêtre d'impression propose le choix de multiACE entre plans sur les bobines chargées et plans sur toutes les voies.
 
 **New in 0.47:** the print window follows the U1 (spools read again when they change), shows the grams with the purge, per colour and per spool, lets you look at the U1 (touchscreen, cameras, light, multiACE panel) and warns when two filaments share a colour. / **Nouveau en 0.47 :** la fenêtre d'impression suit la U1 (bobines relues quand elles changent), affiche les grammes purge comprise, par couleur et par bobine, permet de regarder la U1 (écran tactile, caméras, lumière, panneau multiACE) et prévient quand deux filaments ont la même couleur.
@@ -93,6 +95,8 @@ On export, the plugin runs **the Preflight code served by your U1** (your multiA
 
 <p align="center"><img src="presentation/readme/colour_warning.png" width="760"></p>
 <p align="center"><img src="presentation/readme/what_to_place.png" width="620"></p>
+
+- **Materials**: each spool on the map shows its material. Choosing the spools yourself only offers spools of the filament's material, like multiACE's web Preflight (the others are listed greyed out). A chosen spool that changes material on the U1 blocks the print with a red alert: multiACE would refuse it anyway.
 
 - **Empty head at start**: the U1's own start sequence can stop on an empty head (error 523) before multiACE loads it, so the window offers **“Load Tn from ACE x, lane y”**.
 

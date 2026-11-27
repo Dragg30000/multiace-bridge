@@ -4,6 +4,15 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (1 à 4 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.49.0 (27/11/2026)
+- **L'en-tête reste en vue.** Dans la fenêtre d'impression, dès que tu fais défiler, l'en-tête se réduit et reste en haut : l'aperçu aux couleurs de tes bobines, le total, les changements d'outil et la liste des filaments restent visibles. En haut de la fenêtre, il reprend sa taille.
+- **Matière sur chaque bobine.** La carte des voies affiche la matière de chaque bobine (PLA, PETG…). Elle passe en rouge quand ce n'est pas celle du filament que la bobine imprime ; au survol, la fenêtre dit laquelle était attendue.
+- **Pas de mélange de matières.** « Choisir les bobines moi-même » ne propose plus que les bobines de la matière du filament, comme le Preflight web de multiACE. Les autres sont listées en grisé, avec la raison. Avant, en mode multi, la fenêtre laissait choisir une bobine d'une autre matière (par exemple du PETG pour un filament PLA), et multiACE refusait seulement au lancement (« material mismatch »).
+  - Si une bobine choisie change de matière sur la U1, une alerte rouge le dit en haut. « Lancer l'impression », « Mettre en file multiACE » et « Envoyer sur la U1 sans lancer » restent bloqués tant que la bobine n'est pas changée.
+  - Pour imprimer un filament dans une autre matière : change sa matière dans Orca et retranche ; la bobine sera proposée, avec les bonnes températures.
+- **Panneau : croix sur le message.** Le message du panneau (par exemple « Étape … ajoutée au profil ») se ferme d'un clic sur sa croix, une fois lu.
+- Tests : 30 suites OK avec le code de multiACE 1.91. Nouvelle : matiere_test (vrai code multiACE sur une fausse U1, fenêtre et panneau dans Chrome en français et en anglais : matières sur la carte, choix limité à la matière, bobine changée en PETG, en-tête réduit, croix du message).
+
 ## 0.48.0 (27/11/2026)
 - **multiACE 1.94 : « Bobines chargées » ou « Toutes les voies ».** Avec la 1.94 (pré-version), la U1 calcule ses plans par tête aussi en mode multi, et propose deux façons de faire les plans Optimisé, Par couche et Moins de mélange. La fenêtre d'impression montre le même choix que le Preflight web de multiACE, au-dessus des plans :
   - **Bobines chargées** (par défaut, comme dans multiACE) : les bobines restent où elles sont. Au besoin, une couleur prend la bobine la plus proche sur sa tête, et la fenêtre le signale.
