@@ -39,6 +39,14 @@ class H(http.server.BaseHTTPRequestHandler):
             taps.append(self.path); return self.j(200, {"ok": True})
         if self.path == "/multiace/api/slot-override":
             overrides.append(json.loads(body)); return self.j(200, {"ok": True})
+        if self.path == "/server/files/upload":      # 0.47.0 : « Imprimer » envoie directement à Moonraker (print=true)
+            parts = body.split(b"--" + self.headers["Content-Type"].split("boundary=")[1].encode())
+            fields = {}
+            for part in parts[1:-1]:
+                hdr, val = part.split(b"\r\n\r\n", 1)
+                fields[hdr.decode().split('name="')[1].split('"')[0]] = val[:-2]
+            uploads.append({"name": "moonraker", "data": fields.get("file"), "fields": fields})
+            return self.j(201, {"item": {"path": "x.gcode"}, "print_started": fields.get("print") == b"true", "action": "create_file"})
         if self.path == "/multiace/api/upload-and-print":
             hdr, data = body.split(b"\r\n\r\n", 1); name = hdr.decode().split('filename="')[1].split('"')[0]
             uploads.append({"name": name, "data": data}); return self.j(200, {"ok": True})

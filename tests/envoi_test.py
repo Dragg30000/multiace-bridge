@@ -192,6 +192,8 @@ for t, s in slic.items():
 ts0 = [t + 1 for t, s in sorted(slic.items()) if "%d_%d" % (s["ace"], s["slot"]) == k0]
 ts1 = [t + 1 for t, s in sorted(slic.items()) if "%d_%d" % (s["ace"], s["slot"]) == k1]
 d3 = copy.deepcopy(d)
+for p_ in d3["report"]["plans"].values():   # 0.47.0 : avec l'estimation de la U1, grammes purge comprise (vue_test) ;
+    p_.pop("estimate", None)                 # ici, sans elle (multiACE avant 1.90) : grammes d'OrcaSlicer
 d3["info"]["grams"] = g
 d3["load"]["slots"] = {k0: {"spool": "7", "grams": need[k0] - 16, "pa": {}}}
 if k1 != k0:

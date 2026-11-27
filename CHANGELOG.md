@@ -4,6 +4,20 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (1 à 4 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.47.0 (27/11/2026)
+- **La fenêtre d'impression suit la U1.** Tant qu'elle est ouverte, le plugin relit les bobines de la U1 toutes les 3 s. Une bobine posée, retirée ou changée : la fenêtre est recalculée par le code de la U1 et le dit (« Bobines changées sur la U1 : la fenêtre est à jour. »). Tes choix encore valables restent : plan, cases cochées, bobines imposées encore en place. Pas de relecture pendant un envoi ni pendant le placement pas à pas ; elle s'arrête une fois l'impression lancée ou la fenêtre fermée. Une erreur pendant une relecture n'affiche rien et n'envoie rien au Preflight.
+- **Grammes purge comprise.** Avec l'estimation de la U1 (multiACE 1.90+), chaque couleur affiche ce qu'il faut, purge comprise (au survol : impression + purge), et le total le dit. Sur la carte, chaque bobine utilisée affiche ce qu'il faut et ce qui lui reste (« 23 g / 500 g »), en rouge si elle ne suffit pas. L'alerte « Pas assez de filament » compte aussi la purge. Sans estimation (multiACE avant 1.90) : les grammes d'OrcaSlicer, comme avant.
+- **Regarder la U1.** Un bouton de la fenêtre, aussi pendant le placement pas à pas, ouvre :
+  - l'écran tactile de la U1 : un clic touche l'écran, glisser fait défiler (firmware Extended avec « Remote Screen ») ;
+  - sa caméra, ou une par onglet si multiACE en liste plusieurs (multiACE 1.90+), avec l'interrupteur de la lumière ;
+  - le panneau multiACE.
+  Échap ou un clic à côté ferme la vue.
+- **Couleurs identiques sur l'aperçu.** Quand deux filaments du projet ont la même couleur, un « ! » sur la vignette le signale : l'aperçu repeint ne peut pas les séparer. Le fichier n'est pas touché.
+- **Envoi plus léger pour la U1.** « Lancer l'impression » envoie le fichier préparé directement à Moonraker sur la U1, comme le Preflight web de multiACE. Avant, il passait par multiACE, qui chargeait tout le fichier en mémoire (souvent 100 Mo et plus) avant de le renvoyer à Moonraker. Si la U1 garde le fichier sans lancer l'impression, la fenêtre le dit.
+- Comprend le correctif de la 0.46.3 (marque de multiACE cherchée dans le 1er Mo du fichier préparé).
+- Idées vues dans le plugin multiACE+ 1.95 de decay71 (test interne, qui demande multiACE 1.94) ; ici, elles marchent avec multiACE+ 1.90 et 1.91.
+- Tests : 28 suites OK avec le code de multiACE 1.91. Nouvelle : vue_test (fenêtre sur une fausse U1, dans Chrome, en français et en anglais : relecture des bobines, grammes, « Regarder la U1 », couleurs identiques).
+
 ## 0.46.3 (27/11/2026)
 - **Correctif : envoi annulé à tort, « le fichier préparé n'a pas la marque multiACE ».** Avant d'envoyer, le plugin vérifie que le fichier préparé porte la marque de multiACE. Il ne la cherchait que dans les 64 premiers Ko du fichier. Or multiACE l'écrit juste avant la 1re couche, après les vignettes d'aperçu et le G-code de démarrage. Avec un aperçu lourd (modèle détaillé, beaucoup de couleurs), elle tombait plus loin, et la fenêtre annulait l'envoi d'un fichier pourtant bon. Le plugin la cherche maintenant dans le 1er Mo (multiACE lui-même lit 512 Ko). Rien d'autre ne change.
   - Avec la 0.46.2, pour contourner : menu ⋯ → « Ouvrir dans le Preflight multiACE ».
