@@ -141,7 +141,7 @@ W._reply = lambda ok_, text, final=False: replies.append((ok_, text))
 UP.clear()
 W._print(plan, {"bed": True, "unload": "all", "unload_heads": list(used)})
 body_up = UP[-1][1].decode("utf-8", "replace") if UP else ""
-check(UP and UP[-1][0].endswith("/upload-and-print") and ("PRINT_END\n" + "\n".join(want) + "\n") in body_up,
+check(UP and UP[-1][0].endswith("/server/files/upload") and 'name="print"' in body_up[:1024] and ("PRINT_END\n" + "\n".join(want) + "\n") in body_up,
       "« Imprimer » : la U1 reçoit le fichier avec le déchargement à la fin")
 check(replies and replies[-1][0] and replies[-1][1].endswith(" À la fin, multiACE décharge %s."
                                                              % ", ".join("T%d" % (h + 1) for h in used)),

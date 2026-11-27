@@ -26,6 +26,8 @@ New interface in 0.42: one lanes map for 1 to 4 ACEs, a print window that shows 
 
 **New in 0.46:** auto-dry by humidity with an ACE 2 Pro (an ACE Pro can follow it), and unloading the heads at the end of the print. / **Nouveau en 0.46 :** séchage auto selon l'humidité avec un ACE 2 Pro (un ACE Pro peut le suivre), et déchargement des têtes à la fin de l'impression.
 
+**New in 0.47:** the print window follows the U1 (spools read again when they change), shows the grams with the purge, per colour and per spool, lets you look at the U1 (touchscreen, cameras, light, multiACE panel) and warns when two filaments share a colour. / **Nouveau en 0.47 :** la fenêtre d'impression suit la U1 (bobines relues quand elles changent), affiche les grammes purge comprise, par couleur et par bobine, permet de regarder la U1 (écran tactile, caméras, lumière, panneau multiACE) et prévient quand deux filaments ont la même couleur.
+
 <table>
 <tr>
 <td width="38%" valign="top"><img src="presentation/readme/panel_map.png" width="300"><br><b>Live panel: lanes map</b><br>The 4 heads on top, one row per ACE. Solid line: spool loaded in the head. Dotted line: load queued. Orange diamond: path not calibrated in multiACE. Humidity, temperature and drying per ACE.</td>
@@ -33,12 +35,13 @@ New interface in 0.42: one lanes map for 1 to 4 ACEs, a print window that shows 
 </tr>
 </table>
 
-### Print window: your spool colours, filament left, printer settings, unload at the end
+### Print window: your spool colours, filament left, printer settings, unload at the end, a live look at the U1
 
 <p align="center"><img src="presentation/readme/print_preview.png" width="760"></p>
 
 - **Preview in your spool colours**: the G-code thumbnail (now larger) is repainted with the colours of the spools of the plan shown, a bit more vivid than Orca's thumbnail, and follows the plan you pick and the spools you force. Click it to see the project colours again. It's an approximation: each pixel goes to the project colour that explains it best, shading included, then takes its spool's colour; black, grey and white are measured on the image (Orca's black isn't a shadow). The file doesn't change.
-- **Filament left**: for the plan shown, the grams of each spool are compared with the weight left in the multiACE spool table: "Not enough filament", or "Filament is tight" under 10 % margin. Nothing when the weight is unknown.
+- **Same colour twice**: when two filaments of the project share a colour, a **!** on the preview says so: the repainted preview can't tell them apart. The file isn't touched.
+- **Filament left, purge included**: for the plan shown, the grams of each spool are compared with the weight left in the multiACE spool table: "Not enough filament", or "Filament is tight" under 10 % margin. Nothing when the weight is unknown. With the U1's estimate (multiACE 1.90+), the grams include the purge: each colour shows what it needs (hover: print + purge), and on the map each spool used shows what it needs and what it has left ("23 g / 500 g"), in red when it isn't enough.
 
 <p align="center"><img src="presentation/readme/printer_settings.png" width="420"></p>
 
@@ -47,6 +50,9 @@ New interface in 0.42: one lanes map for 1 to 4 ACEs, a print window that shows 
 <p align="center"><img src="presentation/readme/unload_at_end.png" width="560"></p>
 
 - **Unload at the end**: no head (default), all of them, or one head. Only the heads of the plan shown that are fed by an ACE are offered. Right after the file's `PRINT_END`, the plugin adds multiACE's unload (`ACE_UNLOAD_HEAD`, like the **Unload** button in the panel): XY homing if needed, heating, filament sent back to the ACE, heater off. A head that is already empty is skipped, and the send message says which heads will be unloaded. (The U1's own "unload at the end" setting does nothing for a print started by multiACE: the U1 only learns which heads a print uses from its own start screen.)
+
+- **The window follows the U1**: while it is open, the plugin reads the spools again every 3 s. When one is placed, removed or changed on the U1, the U1 code recomputes the window, which says so. Your choices that still apply stay: plan, ticks, forced spools still in place. Not while sending or placing step by step; it stops once the print is started or the window closed.
+- **Look at the U1**, a button in the window (also while placing step by step): the U1 touchscreen (click to touch, drag to scroll; Extended firmware with “Remote Screen”), its camera, or one tab per camera when multiACE lists several (multiACE 1.90+), with the light switch, and the multiACE panel. Esc or a click outside closes it.
 
 ### Drying for up to 7 days
 
@@ -100,7 +106,7 @@ On export, the plugin runs **the Preflight code served by your U1** (your multiA
 <p align="center"><img src="presentation/readme/spool_copy.png" width="320"></p>
 
 - **Print start**: bed mesh limited to the printed area, flow (PA) calibration per head, stored PA per spool with “Calibrate before”, soft travel to the purge line, time-lapse. With multiACE 1.90.2 and newer, bed and flow calibration and time-lapse are sent to the U1 right before the print starts, like multiACE's own Preflight.
-- **U1 time estimate** (multiACE 1.90), **put in the multiACE queue** (multiACE 1.90 Print Hub), **send to the U1 without printing**.
+- **U1 time estimate** (multiACE 1.90), **put in the multiACE queue** (multiACE 1.90 Print Hub), **send to the U1 without printing**. **Print** sends the prepared file straight to the U1's Moonraker, like multiACE's own web Preflight.
 - **Filaments 5 and up** (multiACE 1.90 virtual tools): the “Before slicing” card shows multiACE's *Slicer filament → MMU / Slot* table and whether each slot holds the right colour.
 - Also in the panel: **before slicing** (nozzles fitted on the U1 and what to set in Orca), **ACE guard** (restarts drying and feed after an ACE USB dropout), **U1 camera and screen**, **compact mode**, **⚙ Options**, **U1 address box**, and the **pipeline step added to your U1 process preset** automatically (save the preset to keep it).
 

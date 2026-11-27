@@ -5,7 +5,7 @@
 
 > ⚠ **Requires multiACE (by decay71) installed on your Snapmaker U1**: the plugin is only an interface, it does nothing without it. Tested on **multiACE 1.27b, multiACE+ 1.90 and 1.91** (older versions: export goes to multiACE's own Preflight).
 
-Control a **Snapmaker U1 running multiACE** (1 to 4 ACE Pro) from one panel inside OrcaSlicer: no more juggling between Orca, Fluidd and the multiACE web UI. New in 0.46: auto-dry by humidity with an ACE 2 Pro, and unloading the heads at the end of the print. 0.46.2: bed and flow calibration and time-lapse work again with multiACE+ 1.91. Since 0.45: the print window repaints the thumbnail in your spool colours, warns when a spool runs short, and has the printer settings.
+Control a **Snapmaker U1 running multiACE** (1 to 4 ACE Pro) from one panel inside OrcaSlicer: no more juggling between Orca, Fluidd and the multiACE web UI. New in 0.47: the print window follows the U1 when spools change, shows the grams with the purge, lets you look at the U1 (touchscreen, cameras, light, multiACE panel) and warns when two filaments share a colour. 0.46: auto-dry by humidity with an ACE 2 Pro, and unloading the heads at the end of the print. Since 0.45: the print window repaints the thumbnail in your spool colours, warns when a spool runs short, and has the printer settings.
 
 ![01_cover.jpg](https://api.orcaslicer.com/api/v1/bundles/media/38d09c9e-0fa6-4ff8-9550-1b971cdb28a8/content){align=center}
 
@@ -35,7 +35,8 @@ On export, the plugin runs **the Preflight code served by your U1** (your multiA
 ![14_print_window.jpg](https://api.orcaslicer.com/api/v1/bundles/media/38eed66c-ed7c-458a-91e3-3e7418716329/content){align=center}
 
 - **Preview in your spool colours**: the G-code thumbnail is repainted with the colours of the spools of the plan shown, a bit more vivid than Orca's thumbnail, and follows your choices. Click it for the project colours. An approximation: the image is repainted, not rendered again.
-- **Filament left**: a warning when a spool doesn't hold enough filament for its colours, from the weight in the multiACE spool table.
+- **Filament left, purge included**: a warning when a spool doesn't hold enough filament for its colours, from the weight in the multiACE spool table. With the U1's estimate, each colour and each spool used shows its grams with the purge ("23 g / 500 g").
+- **Same colour twice**: a **!** on the preview when two filaments of the project share a colour.
 
 ![22_preview_filament.jpg](https://api.orcaslicer.com/api/v1/bundles/media/36cf6731-5fca-479a-ae27-cd7fd91bf516/content){align=center}
 
@@ -44,6 +45,8 @@ On export, the plugin runs **the Preflight code served by your U1** (your multiA
 ![23_printer_settings.jpg](https://api.orcaslicer.com/api/v1/bundles/media/3314fb54-fd81-4ab7-a90e-34a02991e541/content){align=center}
 
 - **Unload at the end**: no head, all of them, or one head fed by an ACE, for this print only. Right after the print, multiACE unloads them like the panel's Unload button and sends the filament back to the ACE.
+- **The window follows the U1**: spools placed, removed or changed on the U1 while it is open are picked up within seconds, and the U1 code recomputes the plans; your choices that still apply stay.
+- **Look at the U1** without leaving the window: its touchscreen (click to touch, drag to scroll), its cameras with the light switch, and the multiACE panel.
 
 ![25_unload_at_end.jpg](https://api.orcaslicer.com/api/v1/bundles/media/3f0020da-b77d-47ac-a880-d2c997033527/content){align=center}
 

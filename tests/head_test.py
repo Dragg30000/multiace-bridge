@@ -99,7 +99,7 @@ ok(replies and replies[-1][0] and UP and UP[-1][0].endswith("/server/files/uploa
 replies.clear(); UP.clear(); W._print("optimize", dict(PREFS, bed=True), None, "print")
 _marker = hasattr(mb.u1_code(c)[1], "read_print_prefs")
 _paths = [p for p, _b in UP]
-ok(replies and replies[-1][0] and _paths and _paths[-1].endswith("/upload-and-print")
+ok(replies and replies[-1][0] and _paths and _paths[-1].endswith("/server/files/upload") and b'name="print"\r\n\r\ntrue' in UP[-1][1][:1024]
    and _paths[:-1] == (["/multiace/api/preflight/prefs"] if _marker else [])
    and (json.loads(UP[0][1]) == {"bed_mesh": True, "camera": False, "flow_cal": False} if _marker else True),
    "Imprimer en mode tête : %s" % ("préférences envoyées juste avant l'impression" if _marker else "ligne dans le fichier"))

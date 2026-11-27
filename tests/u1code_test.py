@@ -31,6 +31,8 @@ class H(http.server.BaseHTTPRequestHandler):
         self._j(404, {})
     def do_POST(self):
         n = int(self.headers.get("Content-Length") or 0); data = self.rfile.read(n); UP.append((self.path, data))
+        if self.path == "/server/files/upload" and MODE.get("mr"):
+            return self._j(201, MODE["mr"])
         if self.path.endswith("/preflight/prefs") and MODE.get("prefs") == "409":
             return self._j(409, {"detail": "print preferences not accepted: Klipper busy"})
         self._j(200, {"ok": True})
@@ -73,7 +75,10 @@ MODE["pysrc"] = "ok"; UP.clear(); sent.clear(); W.start(g, "real.gcode", host, d
 ok(sent and sent[-1].get("report"), "vérifications OK -> proposition affichée")
 W._reply = lambda ok_, text, final=False: sent.append({"done": ok_, "text": text})
 W._print("slicer", {"bed": True, "flow": False, "cam": False}); 
-ok(UP and UP[-1][0].endswith("/upload-and-print") and sent[-1].get("done"), "Imprimer -> fichier préparé envoyé à la U1: %s" % sent[-1].get("text"))
+# 0.47.0 : directement à Moonraker avec print=true, comme le Preflight web de multiACE (plus /upload-and-print)
+PRINT_FIELD = b'Content-Disposition: form-data; name="print"\r\n\r\ntrue\r\n'
+ok(UP and UP[-1][0] == "/server/files/upload" and PRINT_FIELD in UP[-1][1][:1024] and sent[-1].get("done"),
+   "Imprimer -> fichier préparé envoyé à Moonraker, impression lancée (print=true) : %s" % sent[-1].get("text"))
 # 0.46.2 : préférences de lancement avec le code de chaque version de multiACE (1.25b à 1.91). multiACE 1.90.2 et plus :
 # marque en tête du fichier, préférences envoyées par /preflight/prefs juste avant « Imprimer » (imprimante à l'arrêt) ;
 # avant : ligne SET_PRINT_PREFERENCES … FORCE=1 dans le fichier (celle du code de la U1, ou celle de 1.27b du plugin).
@@ -112,22 +117,22 @@ for ref in ("v1.25b", "v1.26b", "v1.27b", "v1.90", "v1.90.1", "v1.90.2", "v1.91"
     marque = "def read_print_prefs" in _git_src(ref)["core"]
     rep_ok, paths, body, rep_, pp_ = _send(ref, ALL)
     if marque:
-        good = (paths == ["/multiace/api/preflight/prefs", "/multiace/api/upload-and-print"]
+        good = (paths == ["/multiace/api/preflight/prefs", "/server/files/upload"] and 'name="print"' in body[:1024]
                 and pp_ == [{"bed_mesh": True, "camera": True, "flow_cal": True}]
                 and "; multiACE preflight prefs: BED_LEVEL=1 FLOW_CALIBRATE=1 TIME_LAPSE_CAMERA=1" in body
                 and "\nSET_PRINT_PREFERENCES" not in body)
     else:
-        good = (paths == ["/multiace/api/upload-and-print"] and not pp_
+        good = (paths == ["/server/files/upload"] and 'name="print"' in body[:1024] and not pp_
                 and "\nSET_PRINT_PREFERENCES BED_LEVEL=1 FLOW_CALIBRATE=1 TIME_LAPSE_CAMERA=1 FORCE=1\n" in body)
     ok(rep_ok and rep_.get("done") and "FLOW_CALIBRATE EXTRUDER=" in body and good,
        "multiACE %s : rapport, impression, options de départ (%s)"
        % (ref[1:], "marque, envoyées juste avant" if marque else "ligne dans le fichier"))
     rep_ok, paths, body, rep_, pp_ = _send(ref, ALL, how="upload")
-    ok(rep_.get("done") and not pp_ and paths == ["/server/files/upload"]
+    ok(rep_.get("done") and not pp_ and paths == ["/server/files/upload"] and 'name="print"' not in body[:1024]
        and (("choisis-les sur l'écran de la U1" in rep_.get("text", "")) == marque),
        "multiACE %s, « Envoyer sans lancer » : rien d'envoyé avant, %s" % (ref[1:], "note sur les options" if marque else "pas de note"))
 rep_ok, paths, body, rep_, pp_ = _send("v1.91", {"bed": False, "flow": False, "cam": False})
-ok(rep_ok and paths == ["/multiace/api/upload-and-print"] and not pp_ and rep_.get("done"),
+ok(rep_ok and paths == ["/server/files/upload"] and not pp_ and rep_.get("done"),
    "multiACE 1.91, aucune option : rien envoyé avant")
 MODE["prefs"] = "409"
 rep_ok, paths, body, rep_, pp_ = _send("v1.91", {"bed": True, "flow": False, "cam": False})
@@ -135,6 +140,18 @@ ok(paths == ["/multiace/api/preflight/prefs"] and rep_.get("done") is False
    and "préférences de lancement refusées par la U1" in rep_.get("text", ""),
    "multiACE 1.91, options refusées par la U1 : impression non lancée (%s)" % rep_.get("text"))
 MODE["prefs"] = None
+# 0.47.0 : réponse de Moonraker à l'envoi direct (print=true) : la U1 doit avoir lancé l'impression
+for mr, want, label in (({"item": {"path": "x.gcode"}, "print_started": True, "print_queued": False, "action": "create_file"}, True, "lancée"),
+                        ({"result": {"item": {}, "print_started": True, "action": "create_file"}}, True, "lancée (réponse emballée)"),
+                        ({"item": {}, "print_started": False, "print_queued": False, "action": "create_file"}, False, "reçue sans lancer"),
+                        ({"item": {}, "print_started": False, "print_queued": True, "action": "create_file"}, False, "mise en file de la U1")):
+    MODE["mr"] = mr
+    rep_ok, paths, body, rep_, pp_ = _send("v1.91", {})
+    txt = rep_.get("text", "")
+    ok(paths == ["/server/files/upload"] and rep_.get("done") is want
+       and (want or ("la U1 a reçu le fichier mais ne l'a pas lancé" in txt and ("mis dans sa file" in txt) == bool(mr.get("print_queued")))),
+       "Moonraker : impression %s -> %s" % (label, txt[:110]))
+MODE["mr"] = None
 SRC.clear(); SRC.update(SRC_NOW); LIVE.clear(); LIVE.update(LIVE_NOW); mb._u1code.update(sha=None)
 # multiACE 1.27b (version de la U1 de Dragg) : API plus ancienne, sans options de lancement dans le code partage
 SRC.update(postprocess=open("/tmp/v127/pp.py").read(), core=open("/tmp/v127/core.py").read()); SRC.pop("swap_cost", None)
