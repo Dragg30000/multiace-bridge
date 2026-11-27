@@ -30,7 +30,10 @@ class H(http.server.BaseHTTPRequestHandler):
         if self.path.endswith("/version"): return self._j(200, {"web": "1.90-test"})
         self._j(404, {})
     def do_POST(self):
-        n = int(self.headers.get("Content-Length") or 0); data = self.rfile.read(n); UP.append((self.path, data)); self._j(200, {"ok": True})
+        n = int(self.headers.get("Content-Length") or 0); data = self.rfile.read(n); UP.append((self.path, data))
+        if self.path.endswith("/preflight/prefs") and MODE.get("prefs") == "409":
+            return self._j(409, {"detail": "print preferences not accepted: Klipper busy"})
+        self._j(200, {"ok": True})
 srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H); threading.Thread(target=srv.serve_forever, daemon=True).start()
 host = "127.0.0.1:%d" % srv.server_address[1]; c = mb.MultiAce(host)
 g = tempfile.mktemp(suffix=".gcode"); shutil.copy("/tmp/g/real.gcode", g)
@@ -41,7 +44,8 @@ ok(all(m.get("slot") for m in rep["plans"]["slicer"]["mapping"]), "chaque filame
 final = mb.u1_prepare(c, g, "real.gcode", "slicer", {"bed": True, "flow": False, "cam": False}, mb._signature(live))
 txt = open(final, encoding="utf-8", errors="replace").read()
 ok("ACE_SWAP_HEAD" in txt or "multiACE" in txt, "fichier préparé par le code de la U1")
-ok("SET_PRINT_PREFERENCES" in txt and "BED_LEVEL=1" in txt, "préférences de lancement de multiACE ajoutées")
+ok(("SET_PRINT_PREFERENCES BED_LEVEL=1 " in txt or "; multiACE preflight prefs: BED_LEVEL=1 " in txt),
+   "préférences de lancement de multiACE ajoutées (ligne, ou marque depuis multiACE 1.90.2)")
 ok(open(g, encoding="utf-8", errors="replace").read() == open("/tmp/g/real.gcode", encoding="utf-8", errors="replace").read(), "export d'origine jamais modifié")
 # verifications
 try: mb.u1_prepare(c, g, "real.gcode", "slicer", {}, "autre"); ok(False, "x")
@@ -70,6 +74,68 @@ ok(sent and sent[-1].get("report"), "vérifications OK -> proposition affichée"
 W._reply = lambda ok_, text, final=False: sent.append({"done": ok_, "text": text})
 W._print("slicer", {"bed": True, "flow": False, "cam": False}); 
 ok(UP and UP[-1][0].endswith("/upload-and-print") and sent[-1].get("done"), "Imprimer -> fichier préparé envoyé à la U1: %s" % sent[-1].get("text"))
+# 0.46.2 : préférences de lancement avec le code de chaque version de multiACE (1.25b à 1.91). multiACE 1.90.2 et plus :
+# marque en tête du fichier, préférences envoyées par /preflight/prefs juste avant « Imprimer » (imprimante à l'arrêt) ;
+# avant : ligne SET_PRINT_PREFERENCES … FORCE=1 dans le fichier (celle du code de la U1, ou celle de 1.27b du plugin).
+import subprocess
+def _git_src(ref):
+    def gs(p):
+        try:
+            return subprocess.check_output(["git", "-C", "/home/claude/src/multiACE", "show", "%s:multiace/%s" % (ref, p)],
+                                           stderr=subprocess.DEVNULL).decode()
+        except subprocess.CalledProcessError:
+            return None                                   # fichier absent de cette version (swap_cost avant 1.90)
+    out = {k: gs(p) for k, p in (("postprocess", "tools/post_process_virtual_toolheads.py"),
+                                 ("core", "web/backend/preflight_core.py"), ("swap_cost", "tools/swap_cost.py"))}
+    return {k: v for k, v in out.items() if v is not None}
+SRC_NOW, LIVE_NOW = dict(SRC), dict(LIVE)
+def _send(ref, prefs, how="print"):
+    """Code de la U1 de la version ref, fenêtre rechargée, puis « Imprimer » (ou « Envoyer sans lancer ») :
+    (rapport calculé ?, envois à la U1 dans l'ordre, fichier envoyé, réponse de la fenêtre, préférences envoyées)."""
+    SRC.clear(); SRC.update(_git_src(ref))
+    LIVE.clear(); LIVE.update(LIVE_NOW)
+    if "swap_cost" not in SRC:
+        LIVE.pop("cost_params", None)                    # multiACE avant 1.90 : pas de coût d'échange
+    mb._u1code.update(sha=None)
+    sent.clear(); W.start(g, "real.gcode", host, delay=0)
+    for _ in range(80):
+        time.sleep(0.25)
+        if sent and sent[-1].get("report"):
+            break
+    rep_ok = bool(sent and sent[-1].get("report"))
+    UP.clear(); W._print("slicer", prefs, how=how)
+    body = UP[-1][1].decode("utf-8", "replace") if UP else ""
+    return (rep_ok, [p for p, _b in UP], body, (sent[-1] if sent else {}),
+            [json.loads(b) for p, b in UP if p.endswith("/preflight/prefs")])
+ALL = {"bed": True, "flow": True, "cam": True}
+for ref in ("v1.25b", "v1.26b", "v1.27b", "v1.90", "v1.90.1", "v1.90.2", "v1.91"):
+    marque = "def read_print_prefs" in _git_src(ref)["core"]
+    rep_ok, paths, body, rep_, pp_ = _send(ref, ALL)
+    if marque:
+        good = (paths == ["/multiace/api/preflight/prefs", "/multiace/api/upload-and-print"]
+                and pp_ == [{"bed_mesh": True, "camera": True, "flow_cal": True}]
+                and "; multiACE preflight prefs: BED_LEVEL=1 FLOW_CALIBRATE=1 TIME_LAPSE_CAMERA=1" in body
+                and "\nSET_PRINT_PREFERENCES" not in body)
+    else:
+        good = (paths == ["/multiace/api/upload-and-print"] and not pp_
+                and "\nSET_PRINT_PREFERENCES BED_LEVEL=1 FLOW_CALIBRATE=1 TIME_LAPSE_CAMERA=1 FORCE=1\n" in body)
+    ok(rep_ok and rep_.get("done") and "FLOW_CALIBRATE EXTRUDER=" in body and good,
+       "multiACE %s : rapport, impression, options de départ (%s)"
+       % (ref[1:], "marque, envoyées juste avant" if marque else "ligne dans le fichier"))
+    rep_ok, paths, body, rep_, pp_ = _send(ref, ALL, how="upload")
+    ok(rep_.get("done") and not pp_ and paths == ["/server/files/upload"]
+       and (("choisis-les sur l'écran de la U1" in rep_.get("text", "")) == marque),
+       "multiACE %s, « Envoyer sans lancer » : rien d'envoyé avant, %s" % (ref[1:], "note sur les options" if marque else "pas de note"))
+rep_ok, paths, body, rep_, pp_ = _send("v1.91", {"bed": False, "flow": False, "cam": False})
+ok(rep_ok and paths == ["/multiace/api/upload-and-print"] and not pp_ and rep_.get("done"),
+   "multiACE 1.91, aucune option : rien envoyé avant")
+MODE["prefs"] = "409"
+rep_ok, paths, body, rep_, pp_ = _send("v1.91", {"bed": True, "flow": False, "cam": False})
+ok(paths == ["/multiace/api/preflight/prefs"] and rep_.get("done") is False
+   and "préférences de lancement refusées par la U1" in rep_.get("text", ""),
+   "multiACE 1.91, options refusées par la U1 : impression non lancée (%s)" % rep_.get("text"))
+MODE["prefs"] = None
+SRC.clear(); SRC.update(SRC_NOW); LIVE.clear(); LIVE.update(LIVE_NOW); mb._u1code.update(sha=None)
 # multiACE 1.27b (version de la U1 de Dragg) : API plus ancienne, sans options de lancement dans le code partage
 SRC.update(postprocess=open("/tmp/v127/pp.py").read(), core=open("/tmp/v127/core.py").read()); SRC.pop("swap_cost", None)
 LIVE.pop("cost_params", None); mb._u1code.update(sha=None); MODE["pysrc"] = "ok"
