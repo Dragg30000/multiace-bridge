@@ -4,6 +4,16 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (1 à 4 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.48.0 (27/11/2026)
+- **multiACE 1.94 : « Bobines chargées » ou « Toutes les voies ».** Avec la 1.94 (pré-version), la U1 calcule ses plans par tête aussi en mode multi, et propose deux façons de faire les plans Optimisé, Par couche et Moins de mélange. La fenêtre d'impression montre le même choix que le Preflight web de multiACE, au-dessus des plans :
+  - **Bobines chargées** (par défaut, comme dans multiACE) : les bobines restent où elles sont. Au besoin, une couleur prend la bobine la plus proche sur sa tête, et la fenêtre le signale.
+  - **Toutes les voies** : la U1 propose où poser les bobines ; il peut falloir en déplacer (« Placer pas à pas »).
+  L'impression utilise le même choix que l'aperçu, et le choix est gardé d'une fenêtre à l'autre. « Comme chargé » ne change pas.
+- Les raisons « impossible avec les bobines chargées » de la 1.94 sont traduites.
+- Avec multiACE 1.91 et avant, rien ne change.
+- Vérifié avec le code de multiACE 1.94 sur une fausse U1, pas encore sur une vraie U1.
+- Tests : 29 suites OK avec le code de multiACE 1.91. Nouvelle : portee_test (code de multiACE 1.94 : rapport, impression avec la même portée, options de départ, envoi sans lancer ; fenêtre dans Chrome en français et en anglais).
+
 ## 0.47.1 (27/11/2026)
 - **« Panneau multiACE » dans sa propre fenêtre.** Dans « Regarder la U1 », le panneau multiACE était intégré dans un cadre de la fenêtre d'impression, et l'interface de multiACE n'y démarrait pas dans OrcaSlicer (« The multiACE web UI did not start »). C'est maintenant un bouton qui ouvre la vue compacte de multiACE dans sa propre fenêtre, chargée en entier comme l'onglet multiACE. L'écran et les caméras restent dans la vue.
 - Description Orca Cloud raccourcie sous la limite de 10 000 caractères.

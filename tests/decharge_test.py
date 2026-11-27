@@ -165,7 +165,9 @@ for val, heads, want_c, want_h in (("all", [0, 1, 2, 3], "all", [0, 1, 2, 3]), (
     okh = ("unload_heads" not in p_) if want_h == "absent" else (p_.get("unload_heads") == want_h)
     check(gotp and p_.get("unload") == want_c and W.prefs.get("unload") == want_c and okh,
           "choix %r, têtes %r -> %r, %r" % (val, heads, want_c, want_h))
-check(set(W.prefs) == {"bed", "zone", "flow", "cam", "soft", "unload"}, "réglages gardés pour la fois suivante (sans la liste)")
+# 0.48.0 : la portée des plans proposés (multiACE 1.94) est gardée aussi
+check({"bed", "zone", "flow", "cam", "soft", "unload"} <= set(W.prefs) <= {"bed", "zone", "flow", "cam", "soft", "unload", "scope"},
+      "réglages gardés pour la fois suivante (sans la liste)")
 
 # ---------------------------------------------------------------- 5. fenêtre dans Chrome
 FAKE = """<script>window.__h=[];window.__p=[];window.orca={postMessage:function(m){window.__p.push(typeof m==="string"?JSON.parse(m):m)},onMessage:function(f){window.__h.push(f)}};</script>"""
