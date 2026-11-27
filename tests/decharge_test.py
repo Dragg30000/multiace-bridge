@@ -127,8 +127,8 @@ want = ["; multiACE Bridge: unload at print end (%s)" % ", ".join("T%d" % (h + 1
 check(len(used) >= 2 and F_ == base[:pe + 1] + want + base[pe + 1:] and mb.gcode_facts(final)["processed"],
       "plan « %s » préparé par la U1 : %d têtes déchargées après PRINT_END, rien d'autre de changé, marque multiACE gardée"
       % (plan, len(used)))
-check(F_[1:5] == base[1:5] and any(x.startswith("SET_PRINT_PREFERENCES BED_LEVEL=1 ") for x in F_[:8]),
-      "préférences de lancement de multiACE toujours en tête")
+check(F_[1:5] == base[1:5] and any(x.startswith(("SET_PRINT_PREFERENCES BED_LEVEL=1 ", "; multiACE preflight prefs: BED_LEVEL=1 "))
+                                    for x in F_[:8]), "préférences de lancement de multiACE toujours en tête (ligne, ou marque depuis 1.90.2)")
 one = open(mb.u1_prepare(c, gpath, "cas2.gcode", plan, {"unload": used[-1], "unload_heads": [used[-1]]}, sig, report=rep),
            encoding="utf-8").read()
 check(one.count("ACE_UNLOAD_HEAD") == 1 and "ACE_UNLOAD_HEAD HEAD=%d\n" % used[-1] in one, "une seule tête : T%d" % (used[-1] + 1))

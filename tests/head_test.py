@@ -94,6 +94,15 @@ ok(plugin(d2, "optimize") == direct("optimize"), "Optimisé : fichier identique 
 W.report, W.info, W.live_sig = rep2, d2["info"], mb._signature(LIVE)
 replies.clear(); UP.clear(); W._print("optimize", dict(PREFS), None, "upload")
 ok(replies and replies[-1][0] and UP and UP[-1][0].endswith("/server/files/upload"), "Optimisé avec les bobines en place : envoyé (%s)" % replies[-1][1][:80])
+# 0.46.2 : « Imprimer » en mode tête, calibration du plateau cochée : multiACE 1.90.2 et plus -> préférences envoyées
+# juste avant (marque dans le fichier) ; avant -> ligne dans le fichier, rien d'envoyé avant
+replies.clear(); UP.clear(); W._print("optimize", dict(PREFS, bed=True), None, "print")
+_marker = hasattr(mb.u1_code(c)[1], "read_print_prefs")
+_paths = [p for p, _b in UP]
+ok(replies and replies[-1][0] and _paths and _paths[-1].endswith("/upload-and-print")
+   and _paths[:-1] == (["/multiace/api/preflight/prefs"] if _marker else [])
+   and (json.loads(UP[0][1]) == {"bed_mesh": True, "camera": False, "flow_cal": False} if _marker else True),
+   "Imprimer en mode tête : %s" % ("préférences envoyées juste avant l'impression" if _marker else "ligne dans le fichier"))
 # file d'impression multiACE : mode « head »
 POSTS = []
 _post0 = mb.MultiAce.post_json

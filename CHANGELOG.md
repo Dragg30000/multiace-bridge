@@ -4,6 +4,13 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (1 à 4 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.46.2 (27/11/2026)
+- **multiACE+ 1.91 : options « Au départ » envoyées avant l'impression.** Depuis multiACE 1.90.2, le Preflight de la U1 ne met plus la calibration du plateau, la calibration du flux (PA) et le time-lapse en ligne dans le fichier : une impression en cours ne peut plus les changer (avec le firmware 2.0 de la U1, elle était annulée, erreur 531). Il met une marque en tête du fichier. Pour « Imprimer », le plugin envoie maintenant ces options à la U1 juste avant de lancer l'impression, comme le Preflight web de multiACE. Sans cela, elles n'étaient plus appliquées avec multiACE 1.90.2 et 1.91.
+  - Si la U1 les refuse, l'impression n'est pas lancée et la fenêtre dit pourquoi.
+  - « Envoyer sans lancer » dit de les choisir sur l'écran de la U1 au lancement, ou de passer par « Mettre en file multiACE ».
+  - Rien ne change avec multiACE 1.90.1 et avant.
+- Tests : 26 suites OK avec le code de multiACE 1.91 et avec celui de la 1.90.1. Le plugin est vérifié avec le code de chaque version de multiACE, de 1.25b à 1.91.
+
 ## 0.46.1 (26/11/2026)
 - **Aperçu plus vif.** Dans la fenêtre d'impression, la vignette repeinte aux couleurs des bobines est plus proche des bobines. Un projet noir, gris ou blanc repeint d'une couleur n'est plus terne : leur clarté est mesurée sur la vignette (le noir d'Orca n'est pas une ombre). Les couleurs sont rendues avec moins de blanc que la vignette d'Orca. Quand aucune couleur ne change, la vignette d'origine reste affichée.
 - Tests : 26 suites OK.
