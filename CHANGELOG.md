@@ -4,6 +4,26 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (1 à 4 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.46.1 (26/11/2026)
+- **Aperçu plus vif.** Dans la fenêtre d'impression, la vignette repeinte aux couleurs des bobines est plus proche des bobines. Un projet noir, gris ou blanc repeint d'une couleur n'est plus terne : leur clarté est mesurée sur la vignette (le noir d'Orca n'est pas une ombre). Les couleurs sont rendues avec moins de blanc que la vignette d'Orca. Quand aucune couleur ne change, la vignette d'origine reste affichée.
+- Tests : 26 suites OK.
+
+## 0.46.0 (25/11/2026, publiée avec la 0.46.1)
+- **Séchage auto selon l'humidité (ACE 2 Pro).** Le séchage auto de multiACE (déjà dans la 1.90) se règle depuis le panneau. Visible seulement si un ACE 2 Pro est détecté ; sans lui, rien ne change. Un bouton « Auto » sous « Sécher » ouvre les réglages de chaque ACE :
+  - ACE 2 Pro : il démarre au-dessus d'un taux d'humidité, s'arrête sous un autre, à la température choisie. Les seuils qui se croisent ne sont pas proposés.
+  - ACE Pro : il n'a pas de capteur. Il suit l'humidité de l'ACE 2 Pro choisi, à sa propre température, et continue de 0 min à 4 h après lui.
+  Chaque changement part tout de suite, aussi pendant une impression. C'est multiACE qui sèche, sur la U1, même OrcaSlicer fermé ; par défaut pas pendant une impression. Un cycle du séchage auto est marqué « Auto » dans la colonne de l'ACE.
+- **Décharger à la fin.** Nouvelle rubrique « À la fin » dans la fenêtre d'impression : aucune tête (par défaut), toutes, ou une seule. Seules les têtes du plan affiché alimentées par un ACE sont proposées. Juste après le PRINT_END du fichier, le plugin ajoute le déchargement de multiACE (`ACE_UNLOAD_HEAD`, comme le bouton « Décharger » du panneau) : homing XY si besoin, chauffe, filament renvoyé dans l'ACE, chauffe coupée. Une tête déjà vide est sautée ; le message d'envoi dit quelles têtes seront déchargées. Le réglage « décharger à la fin » de la U1 n'est pas utilisé : il ne fait rien pour une impression lancée par multiACE, la U1 n'apprenant les têtes utilisées que par son écran de lancement.
+- Panneau : les traits des voies passent sous les rangées ouvertes (séchage, séchage auto) au lieu de barrer leur texte.
+- Tests : 26 suites OK. Nouvelles : autodry_test (ACE 2 Pro simulé) et decharge_test (fichier préparé par le vrai code multiACE), en français et en anglais.
+
+## 0.45.0 (25/11/2026, publiée avec la 0.46.1)
+- **Aperçu aux couleurs de tes bobines.** En haut de la fenêtre « Preflight de la U1 », la vignette du G-code (agrandie : 120 px) est repeinte avec les couleurs des bobines du plan affiché. Elle suit le plan choisi et les bobines imposées. Un clic remet les couleurs du projet. C'est une approximation (l'image est repeinte, pas recalculée en 3D) ; rien ne change dans le fichier.
+- **Filament restant.** Pour le plan affiché, les grammes de chaque couleur sont comparés, par bobine, au poids restant noté dans la table des bobines multiACE : « Pas assez de filament : ACE 2, voie 4 (Noir) a encore 41 g, il en faut environ 56 g (filament 1). » Moins de 10 % de marge : « Filament juste ». Poids inconnu : rien.
+- **Réglages de l'imprimante**, sous « Au départ », avec leur état lu sur la U1 : Air-Print Detection et Quad Replenish (multiACE 1.90+), auto-refill de la U1, lumière éteinte à la fin, détection des spaghettis et des objets sur le plateau par la caméra, avec leur sensibilité (basse ou haute). Un clic les enregistre sur la U1, comme sur son écran. Un réglage que la U1 ne connaît pas n'est pas affiché.
+- Idées vues dans le plugin multiACE+ de decay71 (test interne pour multiACE+ 1.95) ; ici, elles marchent avec multiACE+ 1.90.
+- Tests : 24 suites OK. Nouvelle : envoi_test (aperçu identique à la référence Python, alerte filament, réglages, français et anglais).
+
 ## 0.44.0 (23/11/2026)
 - **Séchage jusqu'à 7 jours** (avant : 8 h au plus). Durées : 1, 2, 4, 6, 8 et 12 h, puis 1, 2, 3, 5 et 7 jours.
   - Une commande de séchage dure 10 h au plus (le maximum de l'interface web de multiACE). Au-delà, l'ACE sèche par cycles de 10 h : le plugin lance le cycle suivant à la fin du précédent, avec la même commande ACE_DRY qu'avant, aussi pendant une impression.
