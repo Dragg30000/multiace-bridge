@@ -5,7 +5,7 @@
 # name = "multiACE Bridge (Snapmaker U1)"
 # description = "Interface pour multiACE de decay71 (Snapmaker U1) dans OrcaSlicer : panneau ACE, interface web multiACE en onglet, et envoi de l'export au Preflight de multiACE."
 # author = "Dragg avec son ami Claude"
-# version = "0.46.2"
+# version = "0.46.3"
 # ///
 """multiACE Bridge - relie OrcaSlicer 2.5 a multiACE (decay71/multiACE) sur une Snapmaker U1.
 
@@ -47,7 +47,7 @@ import uuid
 
 import orca
 
-VERSION = "0.46.2"
+VERSION = "0.46.3"
 # Polices de l'interface : versions modifiées de Hubot Sans et Mona Sans (GitHub, SIL Open Font License
 # 1.1, voir OFL.txt), réduites au latin et renommées « MB Display » et « MB Text » (les noms « Hubot » et
 # « Mona » sont réservés), intégrées pour ne rien télécharger.
@@ -68,6 +68,7 @@ NOZZLES = ("0.2", "0.4", "0.6", "0.8")
 NOZZLE_CHOICES = ("Standard", "Haut débit")   # buses reelles possibles d'une tete de la U1
 NOZZLE_BLOCK_G = 5      # g : un filament plus lourd sur le mauvais type de buse bloque l'envoi (sauf confirmation)
 PROCESSED_MARKERS = ("; multiACE processed:", "; multiACE auto-load:")
+MARK_HEAD_BYTES = 1 << 20      # où chercher la marque de multiACE (multiACE lui-même : 512 Ko)
 U1CONTROL_MARKER = "; u1control:"
 
 # Pas de proxy systeme : l'imprimante est sur le reseau local.
@@ -730,10 +731,17 @@ def read_head_tail(path, head_bytes=65536, tail_bytes=262144):
     return head, tail
 
 
+def has_multiace_mark(path):
+    """Marque de multiACE dans le 1er Mo : elle est juste avant la 1re couche, après les vignettes d'aperçu et le
+    G-code de démarrage, donc parfois bien après 64 Ko (vignette lourde)."""
+    head, _tail = read_head_tail(path, head_bytes=MARK_HEAD_BYTES, tail_bytes=0)
+    return any(m in head for m in PROCESSED_MARKERS)
+
+
 def gcode_facts(path):
     head, tail = read_head_tail(path)
     text = head + "\n" + tail
-    processed = any(m in head for m in PROCESSED_MARKERS)
+    processed = any(m in head for m in PROCESSED_MARKERS) or has_multiace_mark(path)
     u1control = U1CONTROL_MARKER in text
     used = None
     m = re.search(r"^;\s*filament used \[mm\]\s*=\s*(.+)$", text, re.MULTILINE)

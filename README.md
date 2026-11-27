@@ -113,7 +113,7 @@ Interface in French or English (⚙ Options → Language).
 
 **Manual:** download `multiace_bridge_any.py`, then Orca → File → Plugins → *Install local plugin* → restart Orca → allow network access to your U1.
 
-Requirements: OrcaSlicer 2.5, Snapmaker U1 with **multiACE 1.27b or newer** installed (tested on 1.27b and multiACE+ 1.90 with the paxx12 Extended firmware; the remote screen needs Extended with “Remote Screen” enabled). Tested with 2 ACE Pro on a USB hub; feedback welcome with an ACE 2 Pro (auto-dry).
+Requirements: OrcaSlicer 2.5, Snapmaker U1 with **multiACE 1.27b or newer** installed (tested on 1.27b, multiACE+ 1.90 and 1.91 with the paxx12 Extended firmware; the remote screen needs Extended with “Remote Screen” enabled). Tested with 2 ACE Pro on a USB hub; feedback welcome with an ACE 2 Pro (auto-dry).
 
 ## Bugs & feedback
 
