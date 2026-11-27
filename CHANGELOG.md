@@ -4,6 +4,11 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (1 à 4 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.47.1 (27/11/2026)
+- **« Panneau multiACE » dans sa propre fenêtre.** Dans « Regarder la U1 », le panneau multiACE était intégré dans un cadre de la fenêtre d'impression, et l'interface de multiACE n'y démarrait pas dans OrcaSlicer (« The multiACE web UI did not start »). C'est maintenant un bouton qui ouvre la vue compacte de multiACE dans sa propre fenêtre, chargée en entier comme l'onglet multiACE. L'écran et les caméras restent dans la vue.
+- Description Orca Cloud raccourcie sous la limite de 10 000 caractères.
+- Tests : 28 suites OK avec le code de multiACE 1.91.
+
 ## 0.47.0 (27/11/2026)
 - **La fenêtre d'impression suit la U1.** Tant qu'elle est ouverte, le plugin relit les bobines de la U1 toutes les 3 s. Une bobine posée, retirée ou changée : la fenêtre est recalculée par le code de la U1 et le dit (« Bobines changées sur la U1 : la fenêtre est à jour. »). Tes choix encore valables restent : plan, cases cochées, bobines imposées encore en place. Pas de relecture pendant un envoi ni pendant le placement pas à pas ; elle s'arrête une fois l'impression lancée ou la fenêtre fermée. Une erreur pendant une relecture n'affiche rien et n'envoie rien au Preflight.
 - **Grammes purge comprise.** Avec l'estimation de la U1 (multiACE 1.90+), chaque couleur affiche ce qu'il faut, purge comprise (au survol : impression + purge), et le total le dit. Sur la carte, chaque bobine utilisée affiche ce qu'il faut et ce qui lui reste (« 23 g / 500 g »), en rouge si elle ne suffit pas. L'alerte « Pas assez de filament » compte aussi la purge. Sans estimation (multiACE avant 1.90) : les grammes d'OrcaSlicer, comme avant.
