@@ -10,7 +10,8 @@ def ok(c, m):
     if not c: sys.exit(1)
 from playwright.sync_api import sync_playwright
 FAKE = """<script>window.__h=[];window.__p=[];window.orca={postMessage:function(m){window.__p.push(typeof m==="string"?JSON.parse(m):m)},onMessage:function(f){window.__h.push(f)}};</script>"""
-ok('version = "0.49.0"' in open("/home/claude/prive/multiace_bridge_any.py").read() and mb.VERSION == "0.49.0", "version 0.49.0")
+ok(('version = "%s"' % mb.VERSION) in open("/home/claude/prive/multiace_bridge_any.py").read() and mb.VERSION in ("0.51.0", "0.52.0"),
+   "version " + mb.VERSION)
 _head = open("/home/claude/prive/multiace_bridge_any.py").read(1000)
 _nm = [l for l in _head.splitlines() if l.startswith("# name = ")][0]
 ok(("(privé)" in _nm) != ("(Snapmaker U1)" in _nm), "nom : copie privée ou version publique")

@@ -1,9 +1,10 @@
-"""0.49.0 (vrai code multiACE sur une fausse U1, fenêtre et panneau dans Chrome, en français et en anglais) :
+"""0.49.0 et 0.49.1 (vrai code multiACE sur une fausse U1, fenêtre et panneau dans Chrome, en français et en anglais) :
 1. matière de chaque bobine sur la carte des voies ;
 2. choix manuel : seulement les bobines de la matière du filament, comme le Preflight web de multiACE (les autres
    grisées) ; bobine d'une autre matière (choix d'avant, bobine changée sur la U1) : alerte, étiquette, carte en rouge,
    lancement bloqué ;
 3. en-tête collé en haut et réduit quand on fait défiler, grand en haut ; pas de réduction si la page est trop courte ;
+   pas de clignotement juste sous le haut de la page (0.49.1) ;
 4. croix pour fermer le message du panneau.
 Cas de Dragg : projet tout en PLA (Noir, Blanc, Rouge, Blanc), une bobine Blanc PETG dans l'ACE 1, voie 4."""
 import base64, copy, json, os, random, re, struct, tempfile, time, zlib
@@ -112,6 +113,29 @@ with sync_playwright() as pw:
         h4 = hd()
         check(not h4["mini"] and h4["y"] > 0, lang + " : page à peine plus haute que la fenêtre : pas de réduction (pas de clignotement) %s" % h4)
         pg.set_viewport_size({"width": 1220, "height": 760}); pg.evaluate("window.scrollTo(0,0)"); pg.wait_for_timeout(200)
+        # 0.49.1 : pas de clignotement. Chrome corrigeait le défilement quand l'en-tête rétrécissait (« scroll anchoring ») :
+        # arrêté juste sous le haut de la page, l'en-tête changeait de taille sans arrêt (vu par Dragg, multiACE 1.94).
+        OBS = "()=>{if(window.__ob)window.__ob.disconnect();window.__tog=0;window.__ob=new MutationObserver(function(){window.__tog++});window.__ob.observe(document.getElementById('app'),{attributes:true,subtree:true,attributeFilter:['class']})}"
+        TOG = "()=>({tog:window.__tog,y:Math.round(pageYOffset),mini:document.querySelector('.hd').classList.contains('mini')})"
+        for y0 in (26, 40, 60, 80, 120):
+            pg.evaluate("window.scrollTo(0,0)"); pg.wait_for_timeout(300); pg.evaluate(OBS)
+            pg.evaluate("y=>window.scrollTo(0,y)", y0); pg.wait_for_timeout(700)
+            r = pg.evaluate(TOG)
+            check(r["tog"] == 1 and r["y"] == y0 and r["mini"], lang + " : arrêt à %d px : un seul changement, défilement inchangé %s" % (y0, r))
+        pg.evaluate("window.scrollTo(0,0)"); pg.wait_for_timeout(300); pg.evaluate(OBS)
+        pg.mouse.move(400, 400)
+        for _ in range(12):
+            pg.mouse.wheel(0, 15); pg.wait_for_timeout(40)
+        pg.wait_for_timeout(300); r1 = pg.evaluate(TOG)
+        for _ in range(30):
+            pg.mouse.wheel(0, -15); pg.wait_for_timeout(40)
+        pg.wait_for_timeout(400); r2 = pg.evaluate(TOG)
+        check(r1["tog"] == 1 and r1["mini"] and r2["tog"] == 2 and not r2["mini"] and r2["y"] == 0,
+              lang + " : molette vers le bas puis vers le haut : réduit une fois, grand une fois %s %s" % (r1, r2))
+        pg.evaluate(OBS); pg.evaluate("window.scrollTo(0,99999)"); pg.wait_for_timeout(700)
+        r3 = pg.evaluate(TOG)
+        check(r3["tog"] <= 1 and r3["mini"], lang + " : bas de la page : stable %s" % r3)
+        pg.evaluate("window.scrollTo(0,0)"); pg.wait_for_timeout(300)
         # ---- 3. choix manuel : la matière du filament seulement
         pg.click("#fo"); pg.wait_for_selector("[data-pk='1']")
         pg.click("[data-pk='1']"); pg.wait_for_selector(".menu")
