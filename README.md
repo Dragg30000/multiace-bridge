@@ -18,6 +18,12 @@
 
 New interface in 0.42: one lanes map for 1 to 4 ACEs, a print window that shows the U1's plans side by side, and warnings when a colour will not print as in your project. / Nouvelle interface en 0.42 : une carte des voies pour 1 à 4 ACE, une fenêtre qui montre les plans de la U1 côte à côte, et un avertissement quand une couleur ne sortira pas comme dans le projet.
 
+**New in 0.51:** a progress bar of the print in the panel (your plan's colours, every spool swap, the time left, Pause and Stop), a loading bar while the file goes to the U1, and the interface in German and Chinese. / **Nouveau en 0.51 :** une barre de progression de l'impression dans le panneau (couleurs du plan, chaque échange de bobine, temps restant, Pause et Arrêter), une barre de chargement pendant l'envoi à la U1, et l'interface en allemand et en chinois.
+
+<p align="center"><img src="presentation/readme/progress_0.51.jpg" alt="Print progress in the panel" width="760"></p>
+<p align="center"><img src="presentation/readme/sending_0.51.jpg" alt="Loading bar while sending to the U1" width="760"></p>
+<p align="center"><img src="presentation/readme/languages_0.51.jpg" alt="Français, English, Deutsch, 中文" width="760"></p>
+
 **New in 0.43:** head mode (one ACE per head) and multi mode with colour copies, a hand-fed head or background swaps, right in the print window; several spools of the same colour. / **Nouveau en 0.43 :** le mode tête (un ACE par tête) et le mode multi avec copies de couleur, tête à la main ou arrière-plan, dans la fenêtre ; plusieurs bobines pareilles.
 
 **New in 0.44:** drying for up to 7 days, in 10 h cycles that the plugin restarts while OrcaSlicer is open. / **Nouveau en 0.44 :** séchage jusqu'à 7 jours, par cycles de 10 h que le plugin relance tant qu'OrcaSlicer est ouvert.
@@ -118,7 +124,7 @@ On export, the plugin runs **the Preflight code served by your U1** (your multiA
 - Also in the panel: **before slicing** (nozzles fitted on the U1 and what to set in Orca), **ACE guard** (restarts drying and feed after an ACE USB dropout), **U1 camera and screen**, **compact mode**, **⚙ Options**, **U1 address box**, and the **pipeline step added to your U1 process preset** automatically (save the preset to keep it).
 
 Full presentation (before the 0.42 interface): [EN slides](presentation/multiACE_Bridge_slides_EN.pdf), [diaporama FR](presentation/multiACE_Bridge_diaporama_FR.pdf), guides in [docs/](docs/). French screenshots: [presentation/images](presentation/images) (20 to 27 for 0.42, 28 to 31 for 0.43, 32 for 0.44).
-Interface in French or English (⚙ Options → Language).
+Interface in French, English, German or Chinese (⚙ Options → Language; Auto follows Windows). / Interface en français, anglais, allemand ou chinois.
 
 ## Install / Installation
 

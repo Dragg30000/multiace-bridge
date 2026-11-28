@@ -4,6 +4,17 @@ Plugin OrcaSlicer 2.5 pour Snapmaker U1 + multiACE (1 à 4 ACE).
 Fichier à installer : `multiace_bridge_any.py` (Fichier → Plugins → désinstaller l'ancien → *Install local plugin* → redémarrer Orca).
 Toutes les versions précédentes sont dans `versions\` : pour revenir en arrière, installe l'une d'elles à la place.
 
+## 0.51.0 (28/11/2026)
+- **Barre de progression de l'impression dans le panneau.** Pendant une impression ou une pause, une carte en haut du panneau montre l'avancement avec les couleurs du plan envoyé (la partie à venir est assombrie), un repère au-dessus de la barre pour chaque échange de bobine, la couche, le temps restant estimé (au survol : le temps écoulé) et le prochain échange (vers quel pourcentage, sur quelle tête, quelle couleur). Boutons **Pause** / **Reprendre** et **Arrêter** (l'arrêt se confirme d'un deuxième clic) : plus besoin de garder l'écran de la U1 ouvert. Un bouton de la barre d'outils du panneau masque ou réaffiche la carte.
+  - L'avancement est celui de la U1 (M73 du fichier, sinon la position dans le fichier), lu sur Moonraker toutes les 4 s. Pause, reprise et arrêt passent par multiACE, comme son interface web : pendant un échange de bobine, la commande attend la fin de l'échange, et le panneau le dit. Avant multiACE 1.90 : par Moonraker.
+  - Les couleurs et les échanges viennent du plan envoyé depuis la fenêtre d'impression (gardés pour les 12 derniers fichiers, aussi après un redémarrage d'OrcaSlicer). Impression lancée ailleurs : barre simple.
+- **Barre de chargement de l'envoi.** Après « Lancer l'impression », « Envoyer sur la U1 sans lancer » ou « Mettre en file multiACE », la fenêtre montre où en est l'envoi : la préparation du fichier par le code de la U1 (durée estimée d'après les envois précédents sur ce PC), l'envoi sur la U1 en Mo, puis la U1 qui démarre l'impression ou enregistre le fichier. On ne croit plus que la fenêtre a planté.
+- **Allemand et chinois.** Le plugin est aussi en allemand et en chinois simplifié, les langues de multiACE, avec ses mots (Spule, Kopf, Slot… ; 料盘, 换料, 工具头…) : panneau, fenêtre d'impression, notifications. En automatique, il suit la langue de Windows ; sinon ⚙ Options → Langue.
+- **Correctif.** Le titre de la fenêtre d'impression clignotait quand on la faisait défiler juste sous le haut : WebView2 recalait le défilement à chaque changement de taille de l'en-tête.
+- Têtes du panneau : un nom de couleur long n'est plus coupé au milieu.
+- Les 0.49.1, 0.50.0 et 0.50.1 n'ont pas été publiées seules : leurs nouveautés sont dans cette version.
+- Tests : 33 suites OK avec le code de multiACE 1.91. Nouvelles : progres_test (avancement, pause, arrêt, carte du panneau dans Chrome), chargement_test (barre de chargement) et langues_test (dictionnaires, notifications, panneau et fenêtre dans Chrome en allemand et en chinois).
+
 ## 0.49.0 (27/11/2026)
 - **L'en-tête reste en vue.** Dans la fenêtre d'impression, dès que tu fais défiler, l'en-tête se réduit et reste en haut : l'aperçu aux couleurs de tes bobines, le total, les changements d'outil et la liste des filaments restent visibles. En haut de la fenêtre, il reprend sa taille.
 - **Matière sur chaque bobine.** La carte des voies affiche la matière de chaque bobine (PLA, PETG…). Elle passe en rouge quand ce n'est pas celle du filament que la bobine imprime ; au survol, la fenêtre dit laquelle était attendue.
